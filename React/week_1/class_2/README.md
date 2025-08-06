@@ -1,278 +1,322 @@
-# 🚀 Setup React with Vite
+# JSX & Functional Components
 
-This guide explains how to set up a modern React application using **Vite**, a fast frontend build tool. We'll cover prerequisites, installation, project structure, and Vite config basics.
-
----
-
-## 🧰 Prerequisites
-
-Before getting started, make sure you have the following installed:
-
-- [Node.js (LTS version)](https://nodejs.org/)
-  - You can verify by running:
-    ```bash
-    node -v
-    npm -v
-    ```
+In this step, we will learn what **JSX** is and how to create **functional components** in React. This is the foundation of React development.
 
 ---
 
-## ⚙️ Create a React App using Vite
+## 📘 What is JSX?
 
-Follow the steps below to create a new React + Vite project:
+**JSX** stands for **JavaScript XML**.
+It allows us to write **HTML-like code** inside JavaScript.
+React uses this JSX code to create the user interface (UI).
 
-### 1️⃣ Create a Vite App
+### 🎯 Example:
 
-```bash
-# 1. Create a Vite project
-npm create vite@latest
-
-# Follow the prompt:
-# ✔ Project name: » my-app
-# ✔ Select a framework: » React
-# ✔ Select a variant: » JavaScript (or TypeScript if preferred)
+```jsx
+const h1 = <h1>Hello World</h1>
 ```
 
-### 2️⃣ Navigate to the Project Folder
-
-```bash
-cd my-app
-```
-
-### 3️⃣ Install Dependencies
-
-```bash
-npm install
-```
-
-### 4️⃣ Start the Development Server
-
-```bash
-npm run dev
-```
-
-Your project will be running at [http://localhost:5173](http://localhost:5173)
+This looks like HTML, but it's actually JSX.
 
 ---
 
-## 📂 Default Project Structure
+## 🧠 Rules of JSX
 
-After creating the app, your folder will look like this:
+1. **Only one parent tag allowed**
+   Wrap everything inside a single parent tag (usually a `<div>`).
 
+   ✅ Correct:
+
+   ```jsx
+   return (
+     <div>
+       <h1>Hello</h1>
+       <p>Welcome</p>
+     </div>
+   );
+   ```
+
+   ❌ Incorrect:
+
+   ```jsx
+   return (
+     <h1>Hello</h1>
+     <p>Welcome</p>
+   );
+   ```
+
+2. **Use `className` instead of `class`**
+   Since `class` is a reserved keyword in JavaScript, JSX uses `className`.
+
+3. **All tags must be closed properly**
+   Even self-closing tags like `<img />` or `<input />` must be properly closed.
+
+4. **Write JavaScript expressions inside `{}`**
+   To use variables or expressions inside JSX, wrap them in curly braces.
+
+   Example:
+
+   ```jsx
+   const name = "Ali";
+   return <h1>Hello {name}</h1>;
+   ```
+
+---
+
+## ⚙️ Functional Components
+
+There are two ways to create components in React: **class-based** and **functional**.
+But **functional components** are the most commonly used.
+
+### ✅ Syntax 1: Function
+
+```jsx
+function MyComponent() {
+  return <h1>Hello</h1>;
+}
 ```
-my-app/
-├── public/              # Static files (e.g., favicon)
-├── src/                 # Source files (JSX, CSS)
-│   ├── App.jsx          # Main app component
-│   ├── main.jsx         # Entry point
-│   └── index.css        # Global CSS
-├── .gitignore           # Git ignore rules
-├── index.html           # Root HTML file
-├── package.json         # Project metadata & dependencies
-├── vite.config.js       # Vite configuration
-└── README.md            # Project documentation
+
+### ✅ Syntax 2: Arrow Function
+
+```jsx
+const MyComponent = () => {
+  return <h1>Hello</h1>;
+};
+```
+
+✅ These components always **return JSX**.
+✅ You can use them **multiple times**, just like regular HTML elements.
+
+---
+
+## 🔄 Reusing a Component
+
+Once a component is made, you can reuse it like an HTML tag:
+
+```jsx
+<MyComponent />
 ```
 
 ---
 
-## ⚙️ Vite Config Basics (`vite.config.js`)
+## 📦 Export and Import
 
-Here’s what a default `vite.config.js` looks like:
+To use a component from one file in another, you need to **export** it and then **import** it.
+
+### 🔹 1. Default Export:
+
+**MyComponent.jsx**
+
+```jsx
+const MyComponent = () => {
+  return <h1>Hello</h1>;
+};
+
+export default MyComponent;
+```
+
+**App.jsx**
+
+```jsx
+import MyComponent from './MyComponent';
+```
+
+---
+
+### 🔹 2. Named Export:
+
+**Header.jsx**
+
+```jsx
+export const Header = () => {
+  return <h1>This is a Header</h1>;
+};
+```
+
+**App.jsx**
+
+```jsx
+import { Header } from './Header';
+```
+
+---
+
+## 📌 Summary
+
+* JSX allows writing **HTML inside JavaScript**.
+* Components are **reusable building blocks** of React.
+* You can use both **function** and **arrow function** to create components.
+* Use `export` and `import` to share components across files.
+* Always return **only one parent element** from a component.
+* **Close all tags properly.**
+* Use `className` instead of `class`.
+
+---
+
+## 🔹 What is `useState`?
+
+`useState` is a **React hook** that allows you to create **state variables** inside functional components.
+
+### 🔸 Example:
+
+```jsx
+import { useState } from "react";
+
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>You clicked {count} times</p>
+      <button onClick={() => setCount(count + 1)}>Click me</button>
+    </div>
+  );
+}
+```
+
+### 🧠 Key Points:
+
+* `useState` returns **two values**: the current state and a function to update it.
+* When the state changes, the component **re-renders**.
+* State is **local** to the component.
+
+---
+
+## 🔹 Variable vs State in React
+
+| Feature              | Variable (`let` / `const`) | `useState` (React State)   |
+| -------------------- | -------------------------- | -------------------------- |
+| Scope                | Local to function/block    | Stored in React memory     |
+| UI updates on change | ❌ No                       | ✅ Yes                      |
+| Update method        | Direct assignment (`=`)    | `setState` method (`setX`) |
+| Re-render behavior   | No re-render               | Triggers re-render         |
+
+---
+
+### ⚠️ Wrong Way:
 
 ```js
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-});
+// ❌ This won't re-render
+count = count + 1;
 ```
 
-### 🔍 What this does:
-
-* `defineConfig`: Helps with type hints and cleaner config
-* `@vitejs/plugin-react`: Adds support for React, JSX, and fast refresh
-
----
-
-## 🧠 Why Vite?
-
-* ⚡ Super fast hot reload and build
-* 🛠️ Minimal and easy configuration
-* 📦 Uses **ESBuild** for dev server and **Rollup** for production
-* 🧹 Clean folder structure
-* 🚀 Ideal for modern React projects
-
----
-
-## ✅ You're Ready!
-
-Now you're ready to build modern React apps with blazing speed and better performance using **Vite**. 🎉
-
-Want to add routing, state management, or API fetching next? Stay tuned!
-
----
-
-*This setup guide is the first step in mastering React + Vite. More advanced concepts like routing, state management, and deployment will follow in future lessons.*
-
-```
-
----
----
-# React + Vite Project Folder Structure Explained
-
-## 📁 Root Directory
-
-```
-
-my-app/
-├── node\_modules/
-├── public/
-├── src/
-├── .gitignore
-├── index.html
-├── package.json
-├── vite.config.js
-├── README.md
-
-```
-
----
-
-## 📁 node_modules/
-
-- Automatically created when you run `npm install`.
-- Contains all installed dependencies and libraries your project needs to run.
-- You should **never edit files in this folder manually**.
-- It's usually ignored in version control via `.gitignore`.
-
----
-
-## 📁 public/
-
-- Static assets like images, favicons, or other files you want available as-is.
-- Files here are copied as-is to the final build.
-- Example: `public/logo.png` will be available at `http://localhost:5173/logo.png`.
-
----
-
-## 📁 src/
-
-This is the main source code directory where you write your React code.
-
-```
-
-src/
-├── assets/
-├── App.css
-├── App.jsx
-├── index.css
-├── main.jsx
-
-````
-
-### 📁 assets/
-
-- Place images, SVGs, and other static files used in your components here.
-
-### 📄 App.jsx
-
-- This is the main App component.
-- It acts as the **root component** where other components are imported and rendered.
-
-### 📄 App.css
-
-- Contains the styling for the App component.
-
-### 📄 index.css
-
-- Global styles for the whole app (body, html, etc.).
-
-### 📄 main.jsx
-
-- This is the **entry point** for the React app.
-- It renders the `App` component inside the root HTML element in `index.html`.
-- It typically looks like this:
+### ✅ Correct Way:
 
 ```js
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import './index.css';
-
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
-````
-
----
-
-## 📄 .gitignore
-
-* Specifies which files/folders Git should ignore (like `node_modules`, `.env`, etc.)
-
----
-
-## 📄 index.html
-
-* Located at the root level, **not inside `public/` like in CRA**.
-* Has a `div` with the `id="root"` where your React app gets injected.
-* Vite injects scripts here during build.
-
----
-
-## 📄 package.json
-
-* Lists all dependencies, scripts, and metadata for the project.
-* Important scripts:
-
-  * `dev`: Runs the dev server (`vite`)
-  * `build`: Builds the app for production
-  * `preview`: Previews the built app locally
-
----
-
-## 📄 vite.config.js
-
-* Configuration file for Vite.
-* You can customize aliases, plugins, and build options here.
-
-Example:
-
-```js
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()],
-});
+setCount(count + 1);
 ```
 
----
-
-## 📄 README.md
-
-* A markdown file for describing the project.
-* Great place to explain features, how to run, and setup instructions.
+React detects the change and updates the UI.
 
 ---
 
-## ✅ Summary
+## 🔁 When Does Re-render Happen?
 
-| Folder/File    | Purpose                                  |
-| -------------- | ---------------------------------------- |
-| node\_modules/ | Dependencies                             |
-| public/        | Static files (served as-is)              |
-| src/           | Your actual React app code               |
-| App.jsx        | Main React component                     |
-| main.jsx       | Entry point, renders App into index.html |
-| index.html     | Root HTML file                           |
-| vite.config.js | Vite-specific configuration              |
-| package.json   | Project metadata and dependencies        |
+* ✅ When **state changes**, React re-renders **that specific component**.
+* ⚠️ If that state is **passed as props**, then **child components also re-render**.
 
 ---
 
-> 🧠 As your app grows, you can organize `src/` into more folders like `components/`, `pages/`, `hooks/`, `context/`, etc.
+## 🔐 Mutable vs Immutable
+
+| Concept       | Variable (`let`, `const`) | State (`useState`)                     |
+| ------------- | ------------------------- | -------------------------------------- |
+| Mutable?      | ✅ Yes                     | ❌ No (Immutable — use setter function) |
+| Update Method | Direct assignment         | Must use `setState`                    |
+
+---
+
+## 📦 Why is State Immutable?
+
+➕ **React uses immutability** to efficiently detect changes by comparing the **previous and new state**.
+This leads to **better performance**, **fewer bugs**, and **predictable behavior**.
+
+---
+
+## 🔍 Summary Table
+
+| Concept         | Variable (`let` / `const`) | React State (`useState`) |
+| --------------- | -------------------------- | ------------------------ |
+| Scope           | Function/local             | React component memory   |
+| Tracks changes? | ❌ No                       | ✅ Yes                    |
+| UI re-renders?  | ❌ No                       | ✅ Yes                    |
+| Mutable?        | ✅ Yes                      | ❌ No (Immutable)         |
+| Use case        | Temporary logic            | UI interaction/state     |
+
+---
+
+## 💡 Interview Insight
+
+> “In React, state is like the memory of your component. When state changes, the UI updates automatically. Variables, on the other hand, change silently — React doesn’t notice.”
+
+---
+
+### useState()
+
+### Counter App
+
+```jsx
+import { useState } from 'react'
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
+  const updateCount = () => {
+    setCount(count + 1);
+    console.log("Before re-render (stale value):", count);
+  }
+
+  const decreaseCount = () => {
+    if (count > 0) setCount(count - 1);
+  }
+
+  const increaseCountBy5 = () => {
+    setCount(count + 5);
+  }
+
+  const decreaseCountBy5 = () => {
+    setCount(prev => Math.max(0, prev - 5));
+  }
+
+  const resetCount = () => {
+    setCount(0);
+  }
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={updateCount}>Increase by 1</button>
+      <button onClick={decreaseCount}>Decrease by 1</button>
+      <button onClick={increaseCountBy5}>Increase by 5</button>
+      <button onClick={decreaseCountBy5}>Decrease by 5</button>
+      <button onClick={resetCount}>Reset</button>
+    </div>
+  )
+}
+```
+
+**Notes for Students:**
+* `console.log(count)` inside `updateCount` logs the old value because state updates are asynchronous.
+
+---
+
+1. **Plain variable (not React state):**
+
+   ```js
+   let count = 0;
+   function increment() {
+     count += 1;
+     console.log(count); // value changes but UI doesn’t update automatically
+   }
+   ```
+
+   *Explaination:* Changing `count` here updates the variable, but the screen (UI) doesn’t know it should re-render. So the user doesn’t see the change unless you manually force an update.
+
+2. **React state (`useState`):**
+
+   * When you call `setCount(count + 1)`, React *knows* the value changed and re-renders that part of UI automatically.
+   * Think **state is the “memory” React tracks**, whereas a plain variable is just temporary.
+
+3. **The “stale log” gotcha:**
+
+   * In functional component, `console.log(count)` right after `setCount(...)` logs the previous value beacuse state updates are scheduled; React batches and updates before the next render.
