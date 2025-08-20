@@ -160,7 +160,7 @@ export default Child;
 | --------------------- | --------------------------------------------------------------------------------- |
 | **Props**             | Passed from parent to child. Cannot be modified in child.                         |
 | **Callback function** | A function passed as a prop that allows the child to communicate with the parent. |
-| **State lifting**     | Managing the state in a **common parent** and sharing it with children via props. |
+| **State lifting Up**     | Managing the state in a **common parent** and sharing it with children via props. |
 
 ---
 
@@ -201,21 +201,32 @@ function Title({ text = "Untitled" }) {
 }
 ```
 
-## **Common Gotchas**
+### **Prop Drilling**
 
-* **Mutating props** inside a component is incorrect. Always treat them as immutable.
+Prop drilling means **passing props through multiple levels of components** just to get data from a parent component to a deeply nested child component.
 
-* **Over-destructuring** can make it harder to see where props come from if too deep.
+For example:
+If `App → Parent → Child → GrandChild` and you want to send data from `App` to `GrandChild`, you may need to pass the same prop through `Parent` and `Child` even if they don’t actually need it. This makes the code **messy and hard to maintain**.
 
-* Passing new object/array literals inline can cause child re-renders unless memoized:
+```js
+function App() {
+  const userName = "Rana";
 
-  ```jsx
-  // This creates new object each render -> might re-render child
-  <Child config={{ theme: "dark" }} />
-  ```
+  return <Parent userName={userName} />;
+}
 
-* **Prop drilling**: passing props through many layers just to reach a deep child can become messy. Solutions: context API or state management.
+function Parent({ userName }) {
+  return <Child userName={userName} />;
+}
 
+function Child({ userName }) {
+  return <GrandChild userName={userName} />;
+}
+
+function GrandChild({ userName }) {
+  return <h1>Hello {userName}</h1>;
+}
+```
 ---
 
 ## 8. **Summary**
