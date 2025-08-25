@@ -245,144 +245,127 @@ function GrandChild({ userName }) {
 
 ```jsx
 import { useState } from "react";
-import Options from "./questions";
+import { Options } from "./options";
 
-// Main Component
-function App() {
+export function QuizApp() {
   const [mcqs, setMcqs] = useState([]);
   const [quizStarted, setQuizStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
-  const [showResultButton, setShowResultButton] = useState(false);
+  const [answer, setAnswer] = useState("");
   const [showResult, setShowResult] = useState(false);
 
-  const fetchMcqs = async () => {
-    try {
-      const response = await fetch(
-        "https://opentdb.com/api.php?amount=5&category=9&difficulty=easy&type=multiple"
-      );
-      const mcqsData = await response.json();
-      setMcqs(mcqsData.results);
-      setQuizStarted(true);
-      setScore(0);
-      setCurrentQuestionIndex(0);
-      setShowResult(false);
-      setShowResultButton(false);
-    } catch (error) {
-      console.error("Error fetching MCQs:", error);
-    }
-  };
+  async function getQuizQuestions() {
+    const data = await fetch(
+      "https://opentdb.com/api.php?amount=10&category=9&difficulty=easy&type=multiple"
+    );
+    const questions = await data.json();
+    setMcqs(questions.results);
+    setQuizStarted(true);
+    setCurrentQuestionIndex(0);
+    setScore(0);
+    setShowResult(false);
+  }
 
-  const handleAnswer = (selectedAnswer) => {
-    const currentQuestion = mcqs[currentQuestionIndex];
-    if (selectedAnswer === currentQuestion.correct_answer) {
-      setScore((prev) => prev + 10);
-    }
-  };
-
-  const nextQuestion = () => {
+  function nextQuestion() {
     if (currentQuestionIndex < mcqs.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
+      if (mcqs[currentQuestionIndex].correct_answer === answer) {
+        setScore(score + 10);
+      }
       setQuizStarted(false);
-      setShowResultButton(true);
+      setShowResult(true);
     }
-  };
+  }
+
+  function handleAnswer(answer) {
+    setAnswer(answer);
+  }
 
   return (
-    <>
-      <h1>Quiz App</h1>
-      {!quizStarted && !showResultButton && (
-        <button onClick={fetchMcqs}>Start Quiz</button>
+    <div>
+      <h1 className="text-green-500 font-bold">Quiz App</h1>
+      {!quizStarted && (
+        <button onClick={getQuizQuestions}>Start Quiz</button>
       )}
-
-      {quizStarted && mcqs.length > 0 && (
-        <div>
-          <h2>
-            Question {currentQuestionIndex + 1}:{" "}
-            {mcqs[currentQuestionIndex].question}
-          </h2>
-
-          <Options
-            key={currentQuestionIndex}
-            inCorrectAnswer={mcqs[currentQuestionIndex].incorrect_answers}
-            correctAnswer={mcqs[currentQuestionIndex].correct_answer}
-            onAnswer={handleAnswer}
-          />
-
-          <button onClick={nextQuestion}>Next</button>
-        </div>
+      {quizStarted && (
+        <h2>Question: {currentQuestionIndex + 1}</h2>
+        <h2>{mcqs[currentQuestionIndex].question}</h2>
+        <Options
+          correctAnswer={mcqs[currentQuestionIndex].correct_answer}
+          incorrectAnswers={mcqs[currentQuestionIndex].incorrect_answers}
+          onAnswer={handleAnswer}
+        />
+        <button onClick={nextQuestion}>Next Question</button>
       )}
-
-      {showResultButton && (
-        <div>
-          <img
-            src="https://wallpapers-clan.com/wp-content/uploads/2022/08/meme-gif-pfp-18.gif"
-            alt="Quiz Ended"
-          />
-          <br />
-          <button onClick={() => { setShowResult(true); setShowResultButton(false) }}>Show Result</button>
-        </div>
-      )}
-
       {showResult && (
-        <div>
-          {score > 40 ? (
-            <div>
-              <h2>✅ You Passed!</h2>
-              <h3>🎯 Your Score: {score}</h3>
-              <img
-                src="https://gifdb.com/images/high/happy-steve-carell-187f3vn0ul880c3q.gif"
-                alt="Happy"
-              />
-            </div>
-          ) : (
-            <div>
-              <h2>❌ You Failed</h2>
-              <h3>💔 Your Score: {score}</h3>
-              <img
-                src="https://media.tenor.com/G_6Rpef99_IAAAAM/crying-sad-shayari-life.gif"
-                alt="Sad"
-              />
-            </div>
-          )}
-        </div>
+        <h2>Score: {score}</h2>
+        {score > 50 ? (
+          <img src="https://gifdb.com/images/high/happy-steve-carell-shaqari-life-gif-alt.gif" alt="happy" />
+        ) : (
+          <img src="https://media.tenor.com/G_6RpeT99_IAAAA/crying-sad-shayari-life.gif" alt="sad" />
+        )}
       )}
-    </>
+    </div>
   );
 }
-
-export default App;
 ```
 
 ```jsx
 // Options Componnet
-const Options = ({ inCorrectAnswer, correctAnswer, onAnswer }) => {
-    const allOptions = [...inCorrectAnswer, correctAnswer];
-  
-    // Shuffle options randomly
-    const shuffledOptions = allOptions.sort(() => Math.random() - 0.5);
-  
-    const handleOptionChange = (answer) => {
-      onAnswer(answer);
-    };
-  
-    return (
-      <div>
-        {shuffledOptions.map((answer, index) => (
+export const Options = ({ correctAnswer, incorrectAnswer, onAnswer }) => {
+  const allOptions = [...incorrectAnswer, correctAnswer];
+
+  const handleOption = (value) => {
+    onAnswer(value);
+  };
+
+  return (
+    <div>
+      {allOptions.map((option, index) => {
+        return (
           <div key={index}>
             <input
               type="radio"
               name="option"
-              value={answer}
-              onClick={() => handleOptionChange(answer)}
+              value={option}
+              onClick={() => handleOption(option)}
             />
-            <label>{answer}</label>
+            <label>{option}</label>
           </div>
-        ))}
-      </div>
-    );
-  };
-  
-  export default Options;
+        );
+      })}
+    </div>
+  );
+};
 ```
+
+--- 
+### 🏠 Home Task for Todo App
+. **Reset Option Selection:**
+
+   * Ensure that **no option is pre-selected** when moving to the next question.
+
+2. **Prevent Skipping Questions:**
+
+   * The user **cannot go to the next question** without selecting an answer.
+
+3. **Improve UI:**
+
+   * Make the quiz visually appealing using **buttons, spacing, colors, and hover effects**.
+   * Highlight the selected option and provide **visual feedback**.
+
+4. **Display Final Result with Message:**
+
+   * Optionally enhance final results:
+
+     * “Excellent!” for scores > 80
+     * “Good effort!” for scores 50–80
+     * “Try again!” for scores < 50
+   * Add a **retry button** to restart the quiz.
+
+5. **Randomize Options (Optional Advanced Task):**
+
+   * Shuffle **correct and incorrect answers** so the correct answer is not always last.
+---

@@ -85,8 +85,10 @@ function MyForm() {
 * ✅ Controlled components are **recommended** for most use cases.
 
 ---
+##Project 
 
 ### TODO APP (Simple)
+---
 
 ```jsx
 import { useState } from 'react'
@@ -197,3 +199,19 @@ function App() {
 
 > Keys are like **roll numbers in a classroom**:
 > If a new student joins or one leaves, the teacher uses roll numbers to identify students without confusing them.
+
+--- 
+### 🏠 Home Task for Todo App
+
+1. **Add Edit Functionality:**
+
+   * When the user clicks the **Edit** button:
+
+     * The selected todo text should appear in the input field.
+     * The **Add** button should change into an **Update** button to save changes.
+
+2. **Improve the UI:**
+
+   * Make the interface **clean and user-friendly**.
+   * Use simple styling like spacing, borders, hover effects, and button colors.
+---

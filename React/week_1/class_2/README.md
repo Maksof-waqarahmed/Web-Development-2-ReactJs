@@ -251,55 +251,6 @@ This leads to **better performance**, **fewer bugs**, and **predictable behavior
 
 ---
 
-### useState()
-
-### Counter App
-
-```jsx
-import { useState } from 'react'
-
-export default function App() {
-  const [count, setCount] = useState(0);
-
-  const updateCount = () => {
-    setCount(count + 1);
-    console.log("Before re-render (stale value):", count);
-  }
-
-  const decreaseCount = () => {
-    if (count > 0) setCount(count - 1);
-  }
-
-  const increaseCountBy5 = () => {
-    setCount(count + 5);
-  }
-
-  const decreaseCountBy5 = () => {
-    setCount(prev => Math.max(0, prev - 5));
-  }
-
-  const resetCount = () => {
-    setCount(0);
-  }
-
-  return (
-    <div>
-      <p>Count: {count}</p>
-      <button onClick={updateCount}>Increase by 1</button>
-      <button onClick={decreaseCount}>Decrease by 1</button>
-      <button onClick={increaseCountBy5}>Increase by 5</button>
-      <button onClick={decreaseCountBy5}>Decrease by 5</button>
-      <button onClick={resetCount}>Reset</button>
-    </div>
-  )
-}
-```
-
-**Notes for Students:**
-* `console.log(count)` inside `updateCount` logs the old value because state updates are asynchronous.
-
----
-
 1. **Plain variable (not React state):**
 
    ```js
@@ -320,3 +271,64 @@ export default function App() {
 3. **The “stale log” gotcha:**
 
    * In functional component, `console.log(count)` right after `setCount(...)` logs the previous value beacuse state updates are scheduled; React batches and updates before the next render.
+
+---
+
+## Projects
+
+### Counter App
+
+* **Features:**
+
+  * Increase by 1
+  * Decrease by 1
+  * Reset
+
+* **Notes:**
+
+  * `console.log(count)` inside a state setter shows **stale value** because state updates are asynchronous.
+
+---
+
+```jsx
+import { useState } from 'react'
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
+  const updateCount = () => {
+    setCount(count + 1);
+    console.log("Before re-render (stale value):", count);
+  }
+
+  const decreaseCount = () => {
+    if (count > 0) setCount(count - 1);
+  }
+
+
+  const resetCount = () => {
+    setCount(0);
+  }
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={updateCount}>Increase by 1</button>
+      <button onClick={decreaseCount}>Decrease by 1</button>
+      <button onClick={resetCount}>Reset</button>
+    </div>
+  )
+}
+```
+
+**Notes for Students:**
+* `console.log(count)` inside `updateCount` logs the old value because state updates are asynchronous.
+
+---
+
+### 🏠 Home Task
+
+1. Add **increase and decrease the count by 5** functinality.
+2. Make the **UI clean and user-friendly** using simple styling.
+
+---

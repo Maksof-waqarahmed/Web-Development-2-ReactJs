@@ -131,7 +131,13 @@ function UserProfile({ user }) {
 | `||`   | Only render if one ondition is true       | `{userName || Guest}` |                        |             |   |            |
 
 
+---
+
+## Projects
+
 ### Conditional Rendering
+
+---
 
 ### ✅ 1. `if` Statement (Outside JSX)
 
