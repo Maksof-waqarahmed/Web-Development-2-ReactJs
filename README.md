@@ -1,7 +1,7 @@
 # Bano Qabil – Web Development 2 (React + Advanced Tools)
 
 Welcome to the **Bano Qabil – Web Development 2** repository 🚀
-This repo contains all **class codes, examples, and projects** taught in the **Bano Qabil Web Development Batch 02**.
+This repo contains all **class codes, examples, and projects** taught in the **Bano Qabil Web Development 2 Batch**.
 
 After mastering **HTML, CSS, and JavaScript** in Web Dev 1, this course takes you a step further into **modern frontend development** with **ReactJS** and popular tools from the ecosystem.
 
@@ -46,39 +46,10 @@ After mastering **HTML, CSS, and JavaScript** in Web Dev 1, this course takes yo
 
 ---
 
-## 🚀 How to Use
-
-1. Clone the repository
-
-   ```bash
-   git clone https://github.com/your-username/bano-qabil-web-dev-2.git
-   ```
-2. Navigate into the project folder
-
-   ```bash
-   cd bano-qabil-web-dev-2
-   ```
-3. Install dependencies
-
-   ```bash
-   npm install
-   ```
-4. Run the development server
-
-   ```bash
-   npm run dev
-   ```
-5. Open in your browser 👉 [http://localhost:5173](http://localhost:5173)
-
----
-
 ## 🌟 Features
 
 * Beginner to Advanced **React roadmap**
-* **Modern UI development** with reusable components
 * Covers **best practices** for project structure
-* **Hands-on mini projects** for practice
-* **Final project** to showcase complete React skills
 
 ---
 
