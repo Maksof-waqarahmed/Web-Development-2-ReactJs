@@ -1,99 +1,440 @@
-## ⚔️ `fetch` vs `axios` in React
+# 🎯 **React Props (Properties)
 
-### 🔹 1. `fetch`
+---
 
-#### ✅ Pros:
+## 🔹 **What Are Props?**
 
-* Built-in in browser (no need to install)
-* Lightweight
-* Returns a **Promise**
+In React, **props** (short for **properties**) are used to **pass data from one component to another**, usually from a **parent component → to → child component**.
 
-#### ❌ Cons:
+They make your components **dynamic**, **configurable**, and **reusable**.
 
-* Default **doesn’t throw errors** for HTTP errors (like 404)
-* You must **manually convert** response to `.json()`
-* Slightly verbose syntax
+---
 
-#### 📦 Example:
+### 🔸 **Simple Example**
 
-```js
-useEffect(() => {
-  fetch("https://opentdb.com/api.php?amount=5&type=multiple")
-    .then((res) => res.json())
-    .then((data) => console.log(data))
-    .catch((err) => console.error(err));
-}, []);
+```jsx
+function Welcome(props) {
+  return <h1>Hello, {props.name}!</h1>;
+}
+
+function App() {
+  return (
+    <div>
+      <Welcome name="Rana" />
+      <Welcome name="Ali" />
+    </div>
+  );
+}
+```
+
+🧠 **Explanation:**
+
+* `name` is a **prop**.
+* `Welcome` component receives `props` as an **object**.
+* You access it using `props.name`.
+* The parent (`App`) sends data to the child (`Welcome`) as an attribute.
+
+---
+
+## 💡 **Why Props Are Important**
+
+| Reason                     | Description                                                  |
+| -------------------------- | ------------------------------------------------------------ |
+| 🧩 **Reusability**         | You can reuse the same component with different data.        |
+| 🔄 **Data Flow**           | They allow communication from **parent to child**.           |
+| 🧠 **Customization**       | You can modify a component’s content or behavior externally. |
+| 🔍 **Separation of Logic** | Keeps data logic separate from presentation.                 |
+
+---
+
+## 🔹 **Props Are Read-Only**
+
+Props are **immutable** (you cannot change them inside the child component).
+
+```jsx
+function Student(props) {
+  // ❌ Not allowed
+  // props.name = "Ali";  // Error!
+  return <h3>{props.name}</h3>;
+}
+```
+
+✅ You can only **read** props — not modify them.
+
+---
+
+## 🔹 **How Props Work (Behind the Scenes)**
+
+1. Parent component defines attributes (`name="Ali"`)
+2. React converts those into an **object** → `{ name: "Ali" }`
+3. That object is passed as an argument to the child component.
+4. You can then use it inside the child via `props`.
+
+---
+
+### 🔧 **Visual Flow**
+
+```
+Parent Component
+    ↓ (passes props)
+Child Component
+    ↓
+Uses props to display or perform actions
 ```
 
 ---
 
-### 🔸 2. `axios`
+## 🔹 **Why and When We Use Props**
 
-#### ✅ Pros:
+### Why:
 
-* Throws error automatically on bad HTTP responses (404, 500)
-* Automatically parses JSON
-* Can set headers and base URL easily
-* Supports request/response interceptors
+* To **customize** a component without rewriting it.
+* To **pass data** (text, numbers, objects, functions) from one component to another.
+* To enable **communication** and composition: parent supplies the behavior or content, child renders it.
 
-#### ❌ Cons:
+### When:
 
-* Requires installation (`npm install axios`)
-* Slightly larger bundle size than `fetch`
+* You have a generic component (e.g., `Button`, `Card`, `ListItem`) and you want to display different content or behavior.
+* You want a child to trigger something in the parent via a callback (see later).
+* You want to pass configuration, style flags, IDs, handlers, etc.
 
-#### 📦 Example:
+You can pass any JavaScript value: strings, numbers, arrays, objects, functions, even JSX.
+---
 
-```js
-import axios from "axios";
+## 🧩 **Example: Passing Multiple Props**
 
-useEffect(() => {
-  axios.get("https://opentdb.com/api.php?amount=5&type=multiple")
-    .then((res) => console.log(res.data))
-    .catch((err) => console.error(err));
-}, []);
+```jsx
+function UserCard(props) {
+  return (
+    <div>
+      <h2>{props.name}</h2>
+      <p>Age: {props.age}</p>
+      <p>City: {props.city}</p>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div>
+      <UserCard name="Ali" age={25} city="Karachi" />
+      <UserCard name="Rana" age={21} city="Lahore" />
+    </div>
+  );
+}
+```
+
+```jsx
+import React from "react";
+
+// ✅ Sample user object
+const userInfo = {
+  name: "John Doe",
+  email: "john.doe@example.com",
+  age: 30,
+  isAdmin: true,
+  destination: "New York",
+  phone: "+1234567890",
+  address: "123 Main St, Anytown, USA",
+  city: "Anytown",
+  state: "CA",
+  zip: "12345",
+  country: "USA",
+};
+
+export default function App() {
+  return (
+    <div>
+      <CardComponent userInfo={userInfo} />
+    </div>
+  );
+}
+
+// ✅ Card Component
+export function CardComponent(props) {
+  return (
+    <div className="card-component" style={cardStyle}>
+      <h1>{props.userInfo.name}</h1>
+      <p>Email: {props.userInfo.email}</p>
+      <p>Phone: {props.userInfo.phone}</p>
+      <p>Address: {props.userInfo.address}</p>
+      <p>City: {props.userInfo.city}</p>
+      <p>State: {props.userInfo.state}</p>
+      <p>ZIP: {props.userInfo.zip}</p>
+      <p>Country: {props.userInfo.country}</p>
+    </div>
+  );
+}
+
+// ✅ Optional Inline Style (for demo)
+const cardStyle = {
+  border: "1px solid #ccc",
+  padding: "20px",
+  width: "300px",
+  borderRadius: "10px",
+  background: "#f9f9f9",
+};
+```
+---
+
+## 💬 **Destructuring Props**
+
+Instead of using `props.name` again and again, you can extract props directly using **object destructuring**.
+
+### ✅ Without Destructuring
+
+```jsx
+function UserCard(props) {
+  return <p>{props.name} - {props.email}</p>;
+}
+```
+
+### ✅ With Destructuring
+
+```jsx
+function UserCard(props) {
+  const { name, email } = props;
+  return <p>{name} - {email}</p>;
+}
+```
+
+```jsx
+function UserCard({ name, email }) {
+  return <p>{name} - {email}</p>;
+}
+```
+
+🧠 **Why use destructuring?**
+
+* Cleaner code
+* Better readability
+* Avoids repetition of `props.` everywhere
+
+---
+
+## 🧩 **Default Props**
+
+You can assign default values if a prop is not passed.
+
+```jsx
+function Greeting({ name = "Guest" }) {
+  return <h2>Hello, {name} 👋</h2>;
+}
+
+function App() {
+  return (
+    <>
+      <Greeting name="Rana" />
+      <Greeting /> {/* default prop will be used */}
+    </>
+  );
+}
+```
+
+🧠 **Explanation:**
+If `name` is missing, `"Guest"` will be used automatically.
+
+## ✅ You can also **combine rest props**:
+
+```jsx
+function Input({ label, ...rest }) {
+  return (
+    <div>
+      <label>{label}</label>
+      <input {...rest} />
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Input label="Name" type="text" />
+    <Input label="Email" type="email" />
+  );
+}
 ```
 
 ---
 
-## 🔍 Comparison Table
+## 🎁 **Props Can Be Any Type of Data**
 
-| Feature         | `fetch`           | `axios`                    |
-| --------------- | ----------------- | -------------------------- |
-| Installation    | Not required      | `npm install axios`        |
-| JSON parsing    | Manual: `.json()` | Automatic                  |
-| Error handling  | Manual            | Automatic                  |
-| Interceptors    | ❌                 | ✅                          |
-| Base URL config | ❌                 | ✅                          |
-| Request cancel  | Complex           | Easy (`axios.CancelToken`) |
-| Browser support | Modern browsers   | All modern (same)          |
+Props can hold **any type of data**:
+
+* String
+* Number
+* Boolean
+* Array
+* Object
+* Function
+* Even another component (JSX)
+
+### ✅ Example
+
+```jsx
+function Display({ text, count, data, showMessage }) {
+  return (
+    <div>
+      <h2>{text}</h2>
+      <p>Count: {count}</p>
+      <p>{data.title}</p>
+      <button onClick={showMessage}>Click Me</button>
+    </div>
+  );
+}
+
+function App() {
+  const info = { title: "Learning React Props" };
+
+  return (
+    <Display
+      text="Hello Props!"
+      count={10}
+      data={info}
+      showMessage={() => alert("Function as prop called!")}
+    />
+  );
+}
+```
+
+## 🧠 **Example: Passing Props to Components in a List**
+
+```jsx
+import React from "react";
+
+const products = [
+  {
+    id: 1,
+    name: "Wireless Earbuds",
+    price: 1999,
+    quantity: 50,
+    category: "Electronics",
+    description: "Noise-cancelling wireless earbuds with long battery life and touch controls.",
+    image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500"
+  },
+  {
+    id: 2,
+    name: "Smartwatch Pro",
+    price: 4999,
+    quantity: 30,
+    category: "Wearables",
+    description: "Fitness tracking smartwatch with heart rate monitor, GPS, and customizable watch faces.",
+    image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500"
+  },
+  {
+    id: 3,
+    name: "Gaming Laptop",
+    price: 89999,
+    quantity: 15,
+    category: "Computers",
+    description: "High-performance gaming laptop with RTX GPU, 16GB RAM, and 1TB SSD.",
+    image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500"
+  },
+  {
+    id: 4,
+    name: "Leather Wallet",
+    price: 1299,
+    quantity: 100,
+    category: "Accessories",
+    description: "Genuine leather slim wallet with multiple card slots and coin pocket.",
+    image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500"
+  },
+  {
+    id: 5,
+    name: "Bluetooth Speaker",
+    price: 2499,
+    quantity: 60,
+    category: "Audio",
+    description: "Portable waterproof Bluetooth speaker with deep bass and 12-hour playback.",
+    image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500"
+  },
+  {
+    id: 6,
+    name: "Yoga Mat",
+    price: 899,
+    quantity: 200,
+    category: "Fitness",
+    description: "Eco-friendly non-slip yoga mat with cushioning for joint support.",
+    image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500"
+  },
+  {
+    id: 7,
+    name: "Organic Skincare Set",
+    price: 3599,
+    quantity: 80,
+    category: "Beauty",
+    description: "Daily skincare set with cleanser, toner, moisturizer made from natural ingredients.",
+    image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500"
+  },
+  {
+    id: 8,
+    name: "Wireless Charger",
+    price: 1499,
+    quantity: 120,
+    category: "Accessories",
+    description: "Fast wireless charging pad compatible with all Qi-enabled phones.",
+    image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500"
+  },
+  {
+    id: 9,
+    name: "Kids’ Backpack",
+    price: 2199,
+    quantity: 90,
+    category: "Bags",
+    description: "Durable and colorful backpack with multiple compartments for school kids.",
+    image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500"
+  },
+  {
+    id: 10,
+    name: "Stainless Steel Water Bottle",
+    price: 799,
+    quantity: 150,
+    category: "Home & Kitchen",
+    description: "Insulated water bottle keeps drinks cold for 24h or hot for 12h.",
+    image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500"
+  }
+];
+
+export default function App() {
+  return (
+    <div>
+      <h1>Products List</h1>
+      <div>
+        {products.map((product) => (
+          <CardComponent key={product.id} product={product} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function CardComponent({ product }) {
+  const { name, price, description, image, category, quantity } = product;
+  return (
+    <div>
+      <img
+        src={image}
+        alt={name}
+      />
+      <h2>{name}</h2>
+      <p>{description}</p>
+      <p>Price: ₹{price}</p>
+      <p>Category: {category}</p>
+      <p>In stock: {quantity}</p>
+    </div>
+  );
+}
+```
 
 ---
 
-## 🔰 When to Use What?
+## 🔄 **Passing Function as a Prop (Child → Parent Communication)**
 
-| Use Case                        | Recommended |
-| ------------------------------- | ----------- |
-| Small project / beginner        | `fetch`     |
-| Larger apps / advanced features | `axios`     |
-| Need interceptors/auth headers  | `axios`     |
-| Need native browser only        | `fetch`     |
-
----
+Props are **one-way** (parent → child), but we can send data **from child → parent** by passing a **callback function** as a prop.
 ---
 
-### 🔄 Can We Pass Props from Child to Parent?
+### ✅ Example
 
-⛔ **No, props are unidirectional** — they only flow from **parent to child**.
-
-### ✅ How Can the Child Communicate with the Parent?
-
-By using a **callback function** — the parent provides a function as a prop, and the child calls it when needed.
-
----
-
-### 🔧 Example (Step-by-Step):
-
-#### 1️⃣ Parent Component:
+#### Parent Component
 
 ```jsx
 import { useState } from "react";
@@ -102,14 +443,14 @@ import Child from "./Child";
 function Parent() {
   const [message, setMessage] = useState("");
 
-  const receiveFromChild = (dataFromChild) => {
-    setMessage(dataFromChild);
+  const receiveFromChild = (data) => {
+    setMessage(data);
   };
 
   return (
     <div>
       <h2>Parent Component</h2>
-      <p>Message from child: {message}</p>
+      <p>Message from Child: {message}</p>
       <Child sendData={receiveFromChild} />
     </div>
   );
@@ -118,21 +459,16 @@ function Parent() {
 export default Parent;
 ```
 
----
-
-#### 2️⃣ Child Component:
+#### Child Component
 
 ```jsx
 function Child({ sendData }) {
-
-  const handleClick = () => {
-    sendData("Hello Parent! This is from the Child.");
-  };
-
   return (
     <div>
       <h3>Child Component</h3>
-      <button onClick={handleClick}>Send Data to Parent</button>
+      <button onClick={() => sendData("Hello from Child!")}>
+        Send to Parent
+      </button>
     </div>
   );
 }
@@ -140,17 +476,54 @@ function Child({ sendData }) {
 export default Child;
 ```
 
+🧠 **Explanation:**
+
+* Parent passes `sendData` function as a prop.
+* Child calls `sendData()` and passes data back.
+* Parent receives it and updates state.
+
 ---
 
-## 🔄 Props vs State — The Difference
+### **State Lifting Up**
 
-| Feature    | Props                       | State                                 |
-| ---------- | --------------------------- | ------------------------------------- |
-| Data Flow  | From parent to child        | Local to the component                |
-| Mutability | Immutable                   | Mutable (via `setState`)              |
-| Used For   | Passing static/dynamic data | Managing dynamic values and changes   |
-| Created In | Parent component            | Inside the component using `useState` |
-| Ownership  | Parent                      | The component itself                  |
+State lifting up is a pattern where we move the state to the common parent component and share it with child components via props.
+
+---
+
+### 🧠 Example of “State Lifting Up”:
+
+```jsx
+function Parent() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <>
+      <ChildA count={count} />
+      <ChildB setCount={setCount} />
+    </>
+  );
+}
+
+function ChildA({ count }) {
+  return <h2>Count: {count}</h2>;
+}
+
+function ChildB({ setCount }) {
+  return <button onClick={() => setCount(c => c + 1)}>Increment</button>;
+}
+```
+
+---
+
+## 🔄 **Props vs State**
+
+| Feature        | Props                 | State                        |
+| -------------- | --------------------- | ---------------------------- |
+| Data Flow      | Parent → Child        | Component itself             |
+| Mutability     | Immutable             | Mutable                      |
+| Used For       | Passing external data | Managing internal data       |
+| Ownership      | Parent                | Component itself             |
+| Change Trigger | From outside          | From inside (via `setState`) |
 
 ---
 
@@ -160,58 +533,56 @@ export default Child;
 | --------------------- | --------------------------------------------------------------------------------- |
 | **Props**             | Passed from parent to child. Cannot be modified in child.                         |
 | **Callback function** | A function passed as a prop that allows the child to communicate with the parent. |
-| **State lifting Up**     | Managing the state in a **common parent** and sharing it with children via props. |
+| **State Lifting Up**  | Managing the state in a **common parent** and sharing it with children via props. |
 
 ---
 
-## **Advanced Patterns & Details**
+### 1️⃣ **Children Prop**
 
-### **Children Prop**
-
-Every component automatically receives a special prop called `children`—anything placed between its opening and closing tags:
+Each component automatically gets a special prop named `children`, which contains any nested JSX.
 
 ```jsx
 function Wrapper({ children }) {
-  return <div className="wrapper">{children}</div>;
+  return <div className="box">{children}</div>;
 }
 
-// Usage:
-<Wrapper>
-  <p>This is inside wrapper</p>
-</Wrapper>
+function App() {
+  return (
+    <Wrapper>
+      <h2>Hello World</h2>
+      <p>This is inside Wrapper</p>
+    </Wrapper>
+  );
+}
 ```
 
-### **Prop Spreading**
+🧠 **Use Case:** For reusable layout components like modals, cards, or wrappers.
 
-You can forward all props from one component to another:
+---
+
+### 2️⃣ **Prop Spreading**
+
+You can forward all received props to a child element using `{...props}`.
 
 ```jsx
 function Button(props) {
-  return <button {...props} />; // passes all props (like onClick, className, etc.)
+  return <button {...props}>{props.label}</button>;
 }
+
+<Button label="Click" onClick={() => alert("Clicked")} className="btn" />;
 ```
 
-### **Default Props**
+🧠 **Tip:** Use carefully — avoid spreading unnecessary props.
 
-You can define defaults so a prop isn’t required:
+---
+
+### 3️⃣ **Prop Drilling**
+
+When props are passed **through multiple levels of components** unnecessarily.
 
 ```jsx
-function Title({ text = "Untitled" }) {
-  return <h1>{text}</h1>;
-}
-```
-
-### **Prop Drilling**
-
-Prop drilling means **passing props through multiple levels of components** just to get data from a parent component to a deeply nested child component.
-
-For example:
-If `App → Parent → Child → GrandChild` and you want to send data from `App` to `GrandChild`, you may need to pass the same prop through `Parent` and `Child` even if they don’t actually need it. This makes the code **messy and hard to maintain**.
-
-```js
 function App() {
   const userName = "Rana";
-
   return <Parent userName={userName} />;
 }
 
@@ -224,148 +595,12 @@ function Child({ userName }) {
 }
 
 function GrandChild({ userName }) {
-  return <h1>Hello {userName}</h1>;
-}
-```
----
-
-## 8. **Summary**
-
-* Props are how parent components give data or behavior to children.
-* They’re read-only for children—React treats them as immutable.
-* Destructuring makes usage cleaner.
-* Callback props enable child-to-parent communication.
-* `children` is a special prop for nested content.
-* Default values and validation make components safer and easier to use.
-* Watch out for prop drilling and unnecessary re-renders.
-
----
-
-## Quiz App
-
-```jsx
-import { useState } from "react";
-import { Options } from "./options";
-
-export function QuizApp() {
-  const [mcqs, setMcqs] = useState([]);
-  const [quizStarted, setQuizStarted] = useState(false);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [answer, setAnswer] = useState("");
-  const [showResult, setShowResult] = useState(false);
-
-  async function getQuizQuestions() {
-    const data = await fetch(
-      "https://opentdb.com/api.php?amount=10&category=9&difficulty=easy&type=multiple"
-    );
-    const questions = await data.json();
-    setMcqs(questions.results);
-    setQuizStarted(true);
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setShowResult(false);
-  }
-
-  function nextQuestion() {
-    if (currentQuestionIndex < mcqs.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      if (mcqs[currentQuestionIndex].correct_answer === answer) {
-        setScore(score + 10);
-      }
-      setQuizStarted(false);
-      setShowResult(true);
-    }
-  }
-
-  function handleAnswer(answer) {
-    setAnswer(answer);
-  }
-
-  return (
-    <div>
-      <h1 className="text-green-500 font-bold">Quiz App</h1>
-      {!quizStarted && (
-        <button onClick={getQuizQuestions}>Start Quiz</button>
-      )}
-      {quizStarted && (
-        <h2>Question: {currentQuestionIndex + 1}</h2>
-        <h2>{mcqs[currentQuestionIndex].question}</h2>
-        <Options
-          correctAnswer={mcqs[currentQuestionIndex].correct_answer}
-          incorrectAnswers={mcqs[currentQuestionIndex].incorrect_answers}
-          onAnswer={handleAnswer}
-        />
-        <button onClick={nextQuestion}>Next Question</button>
-      )}
-      {showResult && (
-        <h2>Score: {score}</h2>
-        {score > 50 ? (
-          <img src="https://gifdb.com/images/high/happy-steve-carell-shaqari-life-gif-alt.gif" alt="happy" />
-        ) : (
-          <img src="https://media.tenor.com/G_6RpeT99_IAAAA/crying-sad-shayari-life.gif" alt="sad" />
-        )}
-      )}
-    </div>
-  );
+  return <h1>Hello, {userName}</h1>;
 }
 ```
 
-```jsx
-// Options Componnet
-export const Options = ({ correctAnswer, incorrectAnswer, onAnswer }) => {
-  const allOptions = [...incorrectAnswer, correctAnswer];
+🧠 **Problem:** Becomes difficult to manage for deeply nested structures.
 
-  const handleOption = (value) => {
-    onAnswer(value);
-  };
+🩵 **Solution:** Use **Context API** to avoid prop drilling.
 
-  return (
-    <div>
-      {allOptions.map((option, index) => {
-        return (
-          <div key={index}>
-            <input
-              type="radio"
-              name="option"
-              value={option}
-              onClick={() => handleOption(option)}
-            />
-            <label>{option}</label>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-```
-
---- 
-### 🏠 Home Task for Todo App
-. **Reset Option Selection:**
-
-   * Ensure that **no option is pre-selected** when moving to the next question.
-
-2. **Prevent Skipping Questions:**
-
-   * The user **cannot go to the next question** without selecting an answer.
-
-3. **Improve UI:**
-
-   * Make the quiz visually appealing using **buttons, spacing, colors, and hover effects**.
-   * Highlight the selected option and provide **visual feedback**.
-
-4. **Display Final Result with Message:**
-
-   * Optionally enhance final results:
-
-     * “Excellent!” for scores > 80
-     * “Good effort!” for scores 50–80
-     * “Try again!” for scores < 50
-   * Add a **retry button** to restart the quiz.
-
-5. **Randomize Options (Optional Advanced Task):**
-
-   * Shuffle **correct and incorrect answers** so the correct answer is not always last.
 ---
