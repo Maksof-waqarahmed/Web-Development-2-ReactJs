@@ -1,527 +1,703 @@
-## 📝 Forms and Inputs in React
-
-### 🔹 1. **What is a Controlled Form?**
-
-A **controlled component** in React is a form element (like `<input>`, `<textarea>`, `<select>`) whose value is **controlled by React state**.
-
-**Controlled** means React becomes the single source of truth for the input’s value.
-
-#### ✅ Example:
-
-```jsx
-import { useState } from 'react';
-
-function ControlledForm() {
-  const [name, setName] = useState("");
-
-  const handleChange = (e) => {
-    setName(e.target.value);
-  };
-
-  return (
-    <form>
-      <input type="text" value={name} onChange={handleChange} />
-    </form>
-  );
-}
-```
+# ⚛️ Understanding the Rules of Hooks in React
 
 ---
 
-## 🔸 What is `e`?
+## 📘 **Introduction**
 
-`e` stands for the **event object**.
+React Hooks are special functions that let you **use state and other React features** (like lifecycle methods) in **functional components**.
 
-Whenever you trigger an event (like `onChange`, `onClick`, `onSubmit`) on an input or form, React (or plain JavaScript) provides an **event object** which contains:
-
-* The element that triggered the event
-* Its `value`
-* Its `name`
-* And a lot of other useful info
-
-💡 **Most common use**: `e.target` → refers to the input where the event occurred.
-
----
-
-### ✅ Benefits of Controlled Components
-
-* React has **complete control** over form data
-* Easy to **validate**, **disable**, or **format** input
-* Allows for easy **form resets**
-* Great for building **dynamic forms** (show/hide inputs based on values)
-
----
-
-### 🔹 2. `onSubmit` & `preventDefault()`
-
-#### 🔸 `onSubmit`:
-
-This event fires when a form is submitted (usually when clicking a `submit` button).
-
-#### 🔸 `preventDefault()`:
-
-This function prevents the browser’s default behavior — which is **refreshing the page** on form submission.
-
-#### ✅ Example:
-
-```jsx
-function MyForm() {
-  const [email, setEmail] = useState("");
-
-  const handleSubmit = (e) => {
-    e.preventDefault(); // prevents page reload
-    console.log("Form submitted with email:", email);
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <button type="submit">Submit</button>
-    </form>
-  );
-}
-```
-
----
-
-### 🔹 3. Basic Form Validation
-
-**Validation** ensures that users enter proper data before submitting.
-
-#### 🔸 Types of Validation:
-
-* ✅ Required fields
-* 🔢 Min/Max length
-* 📧 Email format
-* 🔐 Password rules
-* 🧠 Custom rules (like confirm password matching)
-
-#### ✅ Example:
-
-```jsx
-function ValidatedForm() {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!email.includes("@")) {
-      setError("Please enter a valid email.");
-      return;
-    }
-    setError("");
-    alert("Submitted successfully!");
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="text"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Enter email"
-      />
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <button type="submit">Submit</button>
-    </form>
-  );
-}
-```
-
----
-
-### 🔹 4. Useful Related Concepts
-
-#### 📌 `value` vs `defaultValue`:
-
-| Concept        | Description                           |
-| -------------- | ------------------------------------- |
-| `value`        | Controlled input (connected to state) |
-| `defaultValue` | Uncontrolled input (initial only)     |
-
-#### 📌 `onChange`:
-
-Runs **every time** the user types or changes the input. You use it to update state.
-
----
-
-### 🔹 5. Optional but Helpful Techniques
-
-#### 📌 Resetting Form:
-
-```jsx
-setName("");
-setEmail("");
-```
-
-#### 📌 Handling Multiple Inputs with One State Object:
-
-```jsx
-const [form, setForm] = useState({ name: "", email: "" });
-
-const handleChange = (e) => {
-  setForm({ ...form, [e.target.name]: e.target.value });
-};
-
-<input name="name" value={form.name} onChange={handleChange} />
-<input name="email" value={form.email} onChange={handleChange} />
-```
-
----
-
-## 🔍 Understanding This Key Line:
-
-```js
-setForm({ ...form, [e.target.name]: e.target.value });
-```
-
-### 🔹 Assume this state:
-
-```js
-const [form, setForm] = useState({
-  name: '',
-  email: '',
-  password: ''
-});
-```
-
-### 🔹 `e.target.name`
-
-* Refers to the `name` attribute of the input field.
-* Example: `<input name="email" />` → `e.target.name === "email"`
-
-### 🔹 `e.target.value`
-
-* Represents the actual value typed by the user.
-* Example: `"hello@example.com"`
-
-### 🔹 `[e.target.name]: e.target.value`
-
-This is called a **computed property name**.
-It dynamically creates a key using the input’s name and updates its value.
-
-If:
-
-```js
-e.target.name = "email"
-e.target.value = "hello@example.com"
-```
-
-Then:
-
-```js
-{ email: "hello@example.com" }
-```
-
-### 🔹 What does `...form` do?
-
-This is the **spread operator**.
-It copies all existing key-value pairs in the `form` state, **preserving old values**.
-
-#### ❌ Bad way (overwrites all values):
-
-```js
-setForm({ email: "hello@example.com" });
-```
-
-This will **remove** the previous values like `name` and `password`.
-
-#### ✅ Correct way:
-
-```js
-setForm({
-  ...form,
-  [e.target.name]: e.target.value
-});
-```
-
-This way, only the updated field changes, and other data remains intact.
-
----
-
-### 🧠 Real Example:
-
-```js
-<input name="email" onChange={(e) => setForm({ ...form, [e.target.name]: e.target.value })} />
-```
-
-Let’s say:
-
-* Current state: `{ name: '', email: '', password: '' }`
-* User types `"rana@gmail.com"` in the email input
-
-Then:
-
-* `e.target.name` → `"email"`
-* `e.target.value` → `"rana@gmail.com"`
-
-So, new state becomes:
-
-```js
-{
-  name: '',
-  email: 'rana@gmail.com',
-  password: ''
-}
-```
-
-✅ Only `email` was updated. All other values were preserved.
-
----
-
-## ❓ What is this technique called?
-
-👉 It’s called **dynamic input handling using computed property names** in React.
-
-It’s a **very common pattern** for handling multiple form fields using a single state object.
-
-```js
-<input name="username" />
-<input name="email" />
-<input name="password" />
-```
-
-All can be handled by **one state object and one handler function**.
-
----
-
-### 🔹 6. Best Practices for Forms in React
-
-✅ Always use `onSubmit` on the `<form>` element
-✅ Prefer controlled components over uncontrolled
-✅ Separate validation logic (optional: use form libraries)
-✅ Disable submit button until form is valid
-✅ Display meaningful, user-friendly error messages
-
-
-### Student Feedback Portal
+Example:
 
 ```jsx
 import { useState } from "react";
-import FeedbackList from "./list-feedback";
 
-function App() {
-  const [feedback, setFeedback] = useState({
-    name: '',
-    email: '',
-    course: '',
-    semester: '',
-    department: '',
-    instructor: '',
-    rating: '',
-    feedbackText: '',
-  });
-
-  const [allFeedback, setAllFeedback] = useState([]); // 🔁 This stores all submitted feedback
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFeedback(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    // Add current feedback to the list
-    setAllFeedback(prev => [...prev, feedback]);
-
-    // Show success message
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
-
-    // Clear form after submission
-    setFeedback({
-      name: '',
-      email: '',
-      course: '',
-      semester: '',
-      department: '',
-      instructor: '',
-      rating: '',
-      feedbackText: '',
-    });
-  };
-
-  console.log("first", allFeedback);
-
-  return (
-    <>
-      <h1>Student Feedback Portal</h1>
-
-      {submitted && (
-        <p style={{ color: 'green', fontWeight: 'bold' }}>
-          ✅ Feedback submitted successfully!
-        </p>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="name">Name:</label> <br />
-        <input type="text" name="name" id="name" placeholder="John" required value={feedback.name} onChange={handleChange} /> <br /><br />
-
-        <label htmlFor="email">Email:</label> <br />
-        <input type="email" name="email" id="email" placeholder="john@example.com" required value={feedback.email} onChange={handleChange} /> <br /><br />
-
-        <label htmlFor="course">Course:</label> <br />
-        <input type="text" name="course" id="course" placeholder="Course Name" required value={feedback.course} onChange={handleChange} /> <br /><br />
-
-        <label htmlFor="semester">Semester:</label> <br />
-        <select name="semester" id="semester" value={feedback.semester} onChange={handleChange} required>
-          <option value="">Select your Semester</option>
-          <option value="one">One</option>
-          <option value="two">Two</option>
-          <option value="three">Three</option>
-          <option value="four">Four</option>
-          <option value="five">Five</option>
-          <option value="six">Six</option>
-          <option value="seven">Seven</option>
-          <option value="eight">Eight</option>
-        </select> <br /><br />
-
-        <label htmlFor="department">Department:</label> <br />
-        <select name="department" id="department" value={feedback.department} onChange={handleChange} required>
-          <option value="">Select your Department</option>
-          <option value="computer science">CS</option>
-          <option value="software engineering">SE</option>
-          <option value="artificial intelligence">AI</option>
-        </select> <br /><br />
-
-        <label htmlFor="instructor">Instructor:</label> <br />
-        <input type="text" name="instructor" id="instructor" placeholder="Instructor Name" required value={feedback.instructor} onChange={handleChange} /> <br /><br />
-
-        <p>Give Rating:</p>
-        <div>
-          {[1, 2, 3, 4, 5].map((num) => (
-            <span key={num}>
-              <input
-                type="radio"
-                id={`rating-${num}`}
-                name="rating"
-                value={num}
-                checked={feedback.rating === String(num)}
-                onChange={handleChange}
-              />
-              <label htmlFor={`rating-${num}`}>{num}</label>
-            </span>
-          ))}
-        </div> <br /><br />
-
-        <label htmlFor="feedbackText">Feedback:</label> <br />
-        <textarea
-          name="feedbackText"
-          id="feedbackText"
-          placeholder="Your feedback here..."
-          required
-          cols={50}
-          rows={10}
-          value={feedback.feedbackText}
-          onChange={handleChange}
-        ></textarea> <br /><br />
-
-        <button type="submit">Submit</button>
-      </form>
-
-      <hr />
-      <h2>Feedback List</h2>
-      {allFeedback.length === 0 ? <p>No feedback submitted yet.</p> : <FeedbackList feedbacks={allFeedback} />}
-    </>
-  );
+function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(count + 1)}>Clicked {count} times</button>;
 }
-
-export default App;
 ```
+
+Hooks make functional components powerful — but to make sure they work correctly, **React enforces two important rules** called **“The Rules of Hooks.”**
+
+---
+
+## ⚖️ **The 2 Rules of Hooks**
+
+| 🧩 Rule                                      | 🧠 Explanation                                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **1️⃣ Only Call Hooks at the Top Level**     | Never call Hooks inside loops, conditions, or nested functions.                               |
+| **2️⃣ Only Call Hooks from React Functions** | Call Hooks only from React components or custom Hooks, not from regular JavaScript functions. |
+
+---
+
+# 🧩 **Rule 1: Only Call Hooks at the Top Level**
+
+---
+
+### 📜 **Meaning**
+
+You must call Hooks **at the top level of your React function**, before any `return`, `if`, `for`, or nested function.
+
+❌ **Invalid Example**
 
 ```jsx
-// list-feedback.jsx
-function FeedbackList({ feedbacks }) {
-    if (!feedbacks || feedbacks.length === 0) {
-        return <p>No feedback available.</p>;
-    }
+function Counter() {
+  if (true) {
+    // ❌ Hook inside a condition (not allowed)
+    const [count, setCount] = useState(0);
+  }
+}
+```
 
-    return (
-        <div>
-            {feedbacks.map((fb, index) => (
-                <div key={index} style={{ border: '1px solid #ccc', padding: '1rem', marginBottom: '1rem' }}>
-                    <p><strong>Name:</strong> {fb.name}</p>
-                    <p><strong>Email:</strong> {fb.email}</p>
-                    <p><strong>Course:</strong> {fb.course}</p>
-                    <p><strong>Semester:</strong> {fb.semester}</p>
-                    <p><strong>Department:</strong> {fb.department}</p>
-                    <p><strong>Instructor:</strong> {fb.instructor}</p>
-                    <p><strong>Rating:</strong> {fb.rating}</p>
-                    <p><strong>Feedback:</strong> {fb.feedbackText}</p>
-                </div>
-            ))}
-        </div>
-    );
+✅ **Valid Example**
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0); // ✅ Top level
+  if (count > 5) {
+    console.log("Count is greater than 5");
+  }
+  return <h2>{count}</h2>;
+}
+```
+
+---
+
+### 🧠 **Why This Rule Exists**
+
+React uses an **internal Hook call order** to track state.
+If you call Hooks inside conditions or loops, the **order of Hooks changes**, and React **loses track** of which state belongs to which Hook.
+
+React assumes Hooks are called **in the same order on every render**.
+
+🧩 Example:
+
+```jsx
+function Example({ flag }) {
+  // Hook 1
+  const [name, setName] = useState("Ali");
+
+  // ❌ Hook inside condition
+  if (flag) {
+    const [age, setAge] = useState(22);
+  }
+
+  // Hook 2
+  const [city, setCity] = useState("Lahore");
+}
+```
+
+If `flag` changes between renders, Hook order breaks → ❌ Error like:
+
+> “Rendered more hooks than during the previous render.”
+
+---
+
+### 💬 **Summary**
+
+| ✅ Allowed                         | ❌ Not Allowed                       |
+| --------------------------------- | ----------------------------------- |
+| Call Hooks at top of the function | Inside `if`, `for`, or any block    |
+| Same order every render           | Changing order based on condition   |
+| Inside React component            | Inside plain JS or helper functions |
+
+---
+
+# ⚛️ **Rule 2: Only Call Hooks from React Functions**
+
+---
+
+### 📜 **Meaning**
+
+You can only call Hooks from:
+
+1. **React functional components**
+2. **Custom Hooks (functions starting with “use”)**
+
+You **cannot call Hooks** from:
+
+* Regular JavaScript functions
+* Class components
+* Event handlers (directly)
+* Loops or conditionals
+
+---
+
+### ✅ **Correct Example**
+
+```jsx
+function Profile() {
+  const [name, setName] = useState("Rana");
+  return <h2>{name}</h2>;
+}
+```
+
+✅ **Custom Hook Example**
+
+```jsx
+function useUserData() {
+  const [user, setUser] = useState("Rana");
+  return user;
 }
 
-export default FeedbackList;
+function Dashboard() {
+  const user = useUserData();
+  return <h3>Welcome, {user}</h3>;
+}
 ```
----
-## 🧑‍🎓 Student Tasks – Feedback App Project
-
-Please complete the following tasks to enhance your React-based Student Feedback App. These features will improve usability, functionality, and user interaction.
 
 ---
 
-### ✅ 1. Rating System (Stars or Emojis)
+### ❌ **Incorrect Example**
 
-* Add a **rating system** to each feedback submission (1 to 5).
-* Use **star icons (⭐)** or **emojis** like:
+```jsx
+// ❌ Not a React component or custom hook
+function fetchUser() {
+  const [user, setUser] = useState("Rana"); // ❌ Error
+}
+```
 
-  ```
-  😡 😐 🙂 😃 🤩
-  ```
-* Make it user-friendly and visually appealing.
-* This helps in expressing the quality of feedback in a fun and clear way.
+📛 React will show an error:
 
----
-
-### ✅ 2. Filter Feedback by Rating
-
-* Add a **dropdown** or **button group** to filter feedbacks.
-* Allow options like:
-
-  * Show all feedback
-  * Show only 4-star and above
-  * Show only 5-star
-* This makes it easier to analyze high-rated feedback quickly.
+> “Invalid Hook Call. Hooks can only be called inside the body of a function component.”
 
 ---
 
-### ✅ 3. Editable Feedback
+### 🧠 **Why This Rule Exists**
 
-* Each feedback card should include an **"Edit" button**.
-* On clicking edit:
+React must **know where your Hooks live** in the component tree.
 
-  * The feedback data should load back into the form.
-  * User can update and re-submit.
-* Ensure that the updated feedback replaces the old one (do not add it as new).
+If you call Hooks in random functions, React can’t associate them with any component’s state or lifecycle — causing unexpected behavior.
 
 ---
 
-### ✅ 4. Delete Feedback
-
-* Add a **"Delete" button** to each feedback card.
-* On clicking, remove that feedback from the list.
-* Optional: Show a confirmation popup before deletion.
+# 🔧 **Custom Hooks**
 
 ---
 
-### ✅ 5. Total Feedback Count
+### 💡 What Are Custom Hooks?
 
-* Display a live count of total feedbacks submitted.
-* Example:
+Custom Hooks are **your own reusable functions** that follow the **Rules of Hooks** and **start with “use”**.
 
-  ```
-  You have submitted 5 feedbacks.
-  ```
-* Update this count in real-time as feedbacks are added or deleted.
+✅ Example:
+
+```jsx
+function useCounter() {
+  const [count, setCount] = useState(0);
+  const increment = () => setCount((c) => c + 1);
+  return { count, increment };
+}
+
+function App() {
+  const { count, increment } = useCounter();
+  return <button onClick={increment}>Count: {count}</button>;
+}
+```
+
+🧠 React identifies any function starting with `use` as a Hook and automatically applies the **Rules of Hooks** to it.
+
+---
+
+# 🔬 **Why the Rules Are Important**
+
+| 🧩 Reason              | 🔍 Description                                        |
+| ---------------------- | ----------------------------------------------------- |
+| 🧠 **Consistency**     | Ensures Hooks are called in the same order each time. |
+| 🪄 **Predictability**  | Keeps state and effect management predictable.        |
+| ⚙️ **React Internals** | React uses Hook call order to map states and effects. |
+| 🚫 **Avoid Bugs**      | Prevents invalid state mismatches and crashes.        |
+
+---
+
+# 🚫 **Common Mistakes and Fixes**
+
+| ❌ Wrong                                      | ✅ Correct                                    |
+| -------------------------------------------- | -------------------------------------------- |
+| Calling Hook inside condition                | Call at top level always                     |
+| Calling Hook in non-React function           | Move logic inside a component or custom hook |
+| Forgetting to start a custom hook with `use` | Always name like `useFetch`, `useCounter`    |
+| Using Hooks in class components              | Hooks work only in functional components     |
+
+---
+
+# 🧠 **Example of Violating vs Following Rules**
+
+### ❌ Violating the Rules
+
+```jsx
+function App() {
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (isVisible) {
+    // ❌ Not allowed
+    const [count, setCount] = useState(0);
+  }
+
+  return <button onClick={() => setIsVisible(!isVisible)}>Toggle</button>;
+}
+```
+
+### ✅ Correct Version
+
+```jsx
+function App() {
+  const [isVisible, setIsVisible] = useState(true);
+  const [count, setCount] = useState(0); // ✅ Top-level call
+
+  return (
+    <div>
+      {isVisible && <p>Count: {count}</p>}
+      <button onClick={() => setIsVisible(!isVisible)}>Toggle</button>
+    </div>
+  );
+}
+```
+
+---
+
+# 🧭 **How React Enforces These Rules**
+
+React uses a special ESLint plugin to catch invalid Hook usage:
+
+> `eslint-plugin-react-hooks`
+
+📦 **Install:**
+
+```bash
+npm install eslint-plugin-react-hooks --save-dev
+```
+
+📄 **Add to `.eslintrc`**
+
+```json
+{
+  "plugins": ["react-hooks"],
+  "rules": {
+    "react-hooks/rules-of-hooks": "error", 
+    "react-hooks/exhaustive-deps": "warn"
+  }
+}
+```
+
+This plugin **automatically checks**:
+
+* You follow the two main Rules of Hooks
+* Dependencies of `useEffect` are correctly declared
+
+---
+
+# 🧩 **Practical Tips**
+
+✅ Always:
+
+* Call Hooks **at top level**
+* Call Hooks **inside React components or custom Hooks**
+* Name your custom hooks starting with **“use”**
+* Keep Hooks order **consistent**
+* Use ESLint plugin for React Hooks
+
+---
+
+# 🏁 **Summary**
+
+| 🧩 Concept          | 📖 Description                                          |
+| ------------------- | ------------------------------------------------------- |
+| **Rule 1**          | Call Hooks only at top level (no loops/conditions)      |
+| **Rule 2**          | Call Hooks only inside React components or custom Hooks |
+| **Why Important**   | Keeps React’s internal state mapping stable             |
+| **Custom Hooks**    | Your own functions using other hooks (start with `use`) |
+| **Linting Support** | Use `eslint-plugin-react-hooks` to detect violations    |
+
+---
+
+# ⚔️ `fetch` vs `axios` in React + Complete Guide to `useEffect`
+
+---
+
+## 🧠 Introduction
+
+When building React applications, you often need to **fetch data from APIs**, send data to servers, or handle asynchronous tasks.
+React itself doesn’t provide a built-in API client — so we use tools like **`fetch`** or **`axios`** to perform these operations.
+
+---
+
+# 🔹 `fetch`
+
+---
+
+### 💡 What is `fetch`?
+
+`fetch()` is a **built-in JavaScript function** that allows you to make HTTP requests to a server.
+It’s part of the **browser’s native API** — no installation is needed.
+
+It returns a **Promise**, which resolves to the response of the request.
+
+---
+
+### ✅ Basic Example
+
+```js
+  fetch("https://opentdb.com/api.php?amount=5&type=multiple")
+    .then((res) => res.json()) // convert response to JSON
+    .then((data) => console.log(data))
+    .catch((err) => console.error("Error:", err));
+```
+
+---
+
+### 🧩 Step-by-Step Explanation
+
+1. **`fetch(url)`** → starts an HTTP request.
+2. It returns a **Promise** that resolves when the response is received.
+3. You must manually call `.json()` to parse the response body.
+4. `.catch()` handles any **network errors**.
+
+---
+
+### ✅ Pros of `fetch`
+
+| Advantage            | Description                                                    |
+| -------------------- | -------------------------------------------------------------- |
+| 🧠 **Built-in**      | No need to install any library — works in all modern browsers. |
+| ⚡ **Lightweight**    | Minimal code footprint.                                        |
+| 💪 **Promise-based** | Works perfectly with async/await syntax.                       |
+| 🌍 **Standard API**  | Supported natively in browsers and Node (with polyfills).      |
+
+---
+
+### ❌ Cons of `fetch`
+
+| Disadvantage                            | Description                                                                               |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 🚫 Doesn’t throw errors for HTTP errors | Even if the server returns `404` or `500`, `fetch` **resolves** instead of **rejecting**. |
+| 🔄 Manual JSON conversion               | You must explicitly call `.json()` on every response.                                     |
+| 🧩 Verbose syntax                       | Requires extra handling for headers, base URLs, and errors.                               |
+
+---
+
+### ⚙️ Example with Error Handling
+
+```jsx
+  fetch("https://jsonplaceholder.typicode.com/users")
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      return res.json();
+    })
+    .then((data) => console.log(data))
+    .catch((err) => console.error("Error fetching data:", err));
+```
+
+✅ This ensures proper error messages for failed HTTP responses.
+
+---
+
+### 🧱 Using `async/await`
+
+```jsx
+  const fetchData = async () => {
+    try {
+      const res = await fetch("https://jsonplaceholder.typicode.com/users");
+      if (!res.ok) throw new Error("Failed to fetch users");
+      const data = await res.json();
+      console.log(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+```
+
+---
+
+# 🔸 `axios`
+
+---
+
+### 💡 What is `axios`?
+
+`axios` is a **third-party HTTP client library** that simplifies data fetching and request handling in JavaScript and React.
+
+📦 Install using:
+
+```bash
+npm install axios
+```
+
+Then import:
+
+```js
+import axios from "axios";
+```
+
+---
+
+### ✅ Example
+
+```jsx
+  axios
+    .get("https://opentdb.com/api.php?amount=5&type=multiple")
+    .then((res) => console.log(res.data))
+    .catch((err) => console.error(err));
+```
+
+---
+
+### ✅ Pros of `axios`
+
+| Advantage                     | Description                                                 |
+| ----------------------------- | ----------------------------------------------------------- |
+| 🧠 **Automatic JSON parsing** | No need to call `.json()`.                                  |
+| 🚫 **Error handling**         | Automatically throws errors for bad HTTP status codes.      |
+| ⚙️ **Easy configuration**     | Supports base URLs, headers, and interceptors.              |
+| 🔁 **Interceptors**           | Modify requests/responses globally (e.g., add auth tokens). |
+| ⚡ **Request cancellation**    | Supports `CancelToken` for aborting requests easily.        |
+
+---
+
+### ❌ Cons of `axios`
+
+| Disadvantage             | Description                                    |
+| ------------------------ | ---------------------------------------------- |
+| 📦 Requires installation | Must install via npm or yarn.                  |
+| 🧮 Slightly heavier      | Larger bundle size compared to native `fetch`. |
+
+---
+
+### 🧩 Example with Async/Await
+
+```jsx
+import axios from "axios";
+
+  const getData = async () => {
+    try {
+      const res = await axios.get("https://jsonplaceholder.typicode.com/users");
+      console.log(res.data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+```
+
+---
+
+# ⚖️ Comparison: `fetch` vs `axios`
+
+| Feature                 | `fetch`                     | `axios`                |
+| ----------------------- | --------------------------- | ---------------------- |
+| 🧱 Installation         | Not required                | `npm install axios`    |
+| 🔄 JSON Parsing         | Manual: `.json()`           | Automatic              |
+| 🚫 HTTP Error Handling  | Manual check (`!res.ok`)    | Automatic              |
+| 🧩 Interceptors         | ❌ Not available             | ✅ Built-in             |
+| 🧠 Base URL             | ❌ Must repeat URL           | ✅ Can define globally  |
+| 🧹 Request Cancel       | Complex (`AbortController`) | Simple (`CancelToken`) |
+| 🧮 Syntax               | Slightly verbose            | Cleaner and shorter    |
+| 🌍 Browser Support      | All modern browsers         | All modern browsers    |
+| ⚙️ File Upload/Download | Manual setup                | Built-in helpers       |
+
+---
+
+# 🧭 When to Use Which?
+
+| Scenario                           | Recommended |
+| ---------------------------------- | ----------- |
+| Small / beginner project           | ✅ `fetch`   |
+| Need simple GET/POST               | ✅ `fetch`   |
+| Large app with auth headers        | ✅ `axios`   |
+| Reusable base URL and interceptors | ✅ `axios`   |
+| File uploads/downloads             | ✅ `axios`   |
+| Pure browser-only app              | ✅ `fetch`   |
+
+---
+
+# ⚡ Example: Using `axios` with Base URL and Interceptor
+
+```jsx
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: "https://jsonplaceholder.typicode.com",
+});
+
+// Interceptor to log requests
+api.interceptors.request.use((config) => {
+  console.log("Request Sent:", config.url);
+  return config;
+});
+
+api.get("/users")
+    .then((res) => console.log(res.data))
+    .catch((err) => console.error(err));
+```
+
+---
+
+# 🧠 `useEffect`
+
+---
+
+### 💡 What is `useEffect`?
+
+`useEffect` is a **React Hook** that lets you perform **side effects** in function components.
+
+👉 Side effects are **actions that affect something outside the component**, like:
+
+* Fetching data from an API
+* Updating the DOM
+* Managing subscriptions
+* Setting up timers or intervals
+
+---
+
+### 🧩 Basic Syntax
+
+```jsx
+useEffect(() => {
+  // side effect logic
+}, [dependencies]);
+```
+
+---
+
+### ⚙️ Parameters Explained
+
+| Parameter        | Description                                            |
+| ---------------- | ------------------------------------------------------ |
+| `callback`       | Function that runs after render (side effect code).    |
+| `[dependencies]` | Array of variables — effect re-runs when these change. |
+
+---
+
+# 🔄 Lifecycle of `useEffect`
+
+| Phase          | Behavior                                  | Example              |
+| -------------- | ----------------------------------------- | -------------------- |
+| **Mounting**   | Runs once when component loads (use `[]`) | API calls, setup     |
+| **Updating**   | Runs when dependency changes              | Re-fetching, syncing |
+| **Unmounting** | Cleanup using return function             | Removing listeners   |
+
+---
+
+### 🧩 Mounting Example
+
+```jsx
+useEffect(() => {
+  console.log("Component mounted");
+}, []);
+```
+
+### 🧩 Updating Example
+
+```jsx
+const [count, setCount] = useState(0);
+
+useEffect(() => {
+  console.log("Count changed:", count);
+}, [count]);
+```
+
+### 🧹 Cleanup Example
+
+```jsx
+useEffect(() => {
+  const interval = setInterval(() => console.log("Running..."), 1000);
+
+  return () => clearInterval(interval); // cleanup when unmount
+}, []);
+```
+
+---
+
+# 📡 Data Fetching with Cleanup (using AbortController)
+
+```jsx
+useEffect(() => {
+  const controller = new AbortController();
+
+  fetch("https://jsonplaceholder.typicode.com/users", {
+    signal: controller.signal,
+  })
+    .then((res) => res.json())
+    .then((data) => console.log(data))
+    .catch((err) => {
+      if (err.name !== "AbortError") console.error(err);
+    });
+
+  return () => controller.abort(); // cancel fetch if unmounted
+}, []);
+```
+
+---
+
+# ⚙️ Common Mistakes with `useEffect`
+
+| Mistake                             | Fix                                                           |
+| ----------------------------------- | ------------------------------------------------------------- |
+| ❌ Using async directly in useEffect | ✅ Create an inner async function                              |
+| ❌ Forgetting dependencies           | ✅ Add all variables used in effect                            |
+| ❌ Missing cleanup                   | ✅ Return cleanup function                                     |
+| ❌ Running too often                 | ✅ Use correct dependency array                                |
+| ❌ Infinite re-renders               | ✅ Don’t update state directly inside effect without condition |
+
+---
+
+# 🎬 Real-World Example: Movie Search App
+
+```jsx
+import React, { useState, useEffect } from "react";
+
+const MovieSearch = () => {
+  const [query, setQuery] = useState("spiderman");
+  const [movie, setMovie] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchMovie = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(
+          `https://www.omdbapi.com/?t=${query}&apikey=your_api_key`
+        );
+        const data = await res.json();
+        if (data.Response === "True") {
+          setMovie(data);
+        } else {
+          setError("Movie not found!");
+          setMovie(null);
+        }
+      } catch (err) {
+        setError("Something went wrong!");
+      }
+      setLoading(false);
+    };
+
+    if (query) fetchMovie();
+  }, [query]);
+
+  return (
+    <div style={{ textAlign: "center", marginTop: "20px" }}>
+      <h2>🎬 Movie Search App</h2>
+      <input
+        type="text"
+        placeholder="Enter movie name..."
+        onKeyDown={(e) => e.key === "Enter" && setQuery(e.target.value)}
+      />
+      {loading && <p>Loading...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      {movie && (
+        <div>
+          <h3>
+            {movie.Title} ({movie.Year})
+          </h3>
+          <img src={movie.Poster} alt={movie.Title} />
+          <p>⭐ Rating: {movie.imdbRating}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MovieSearch;
+```
+
+---
