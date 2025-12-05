@@ -310,7 +310,7 @@ This plugin **automatically checks**:
 
 ---
 
-# ⚔️ `fetch` vs `axios` in React + Complete Guide to `useEffect`
+# ⚔️ `fetch` vs `axios` in React + `useEffect`
 
 ---
 

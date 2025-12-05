@@ -8,7 +8,7 @@
 
 ### 🧠 What is `useRef`?
 
-`useRef` is a React Hook that gives you a **mutable reference** to store values that **persist between re-renders** — **without causing a re-render**.
+`useRef` is a that gives you a **mutable reference** to store values that **persist between re-renders** — **without causing a re-render**.
 
 It can be used for:
 
