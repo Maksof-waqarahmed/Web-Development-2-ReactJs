@@ -1,5 +1,17 @@
 # 🎯 React Forms — Handling Events & User Interactions
 
+## 📚 Topics Covered
+- React Synthetic Event System
+- Event naming conventions (camelCase)
+- `onClick`, `onChange`, `onSubmit` handlers
+- `preventDefault()` — stopping page reload
+- Controlled vs Uncontrolled components
+- Form validation basics
+- `key` prop in lists — why it matters
+- Project: Todo App (Create, Delete)
+
+---
+
 Forms in React are one of the most common ways to interact with users — typing input, submitting data, clicking buttons, etc.
 But unlike regular HTML, **React controls everything via state and event handlers**, allowing **predictable and dynamic behavior**.
 
@@ -376,18 +388,38 @@ function App() {
 
 ---
 
-### 🏠 Home Task for Todo App
+---
 
-1. **Add Edit Functionality:**
+## 🎯 Interview Questions
 
-   * When the user clicks the **Edit** button:
+**Q1: What is a Synthetic Event in React?**
 
-     * The selected todo text should appear in the input field.
-     * The **Add** button should change into an **Update** button to save changes.
+> React wraps native browser events in a `SyntheticEvent` object that has the same interface across all browsers. This ensures consistent event handling behavior regardless of the browser.
 
-2. **Improve the UI:**
+**Q2: What is the difference between a controlled and uncontrolled component?**
 
-   * Make the interface **clean and user-friendly**.
-   * Use simple styling like spacing, borders, hover effects, and button colors.
+> Controlled: React state is the single source of truth — `value={state}` + `onChange` handler. Uncontrolled: DOM manages its own state — accessed via `useRef`. Controlled components are preferred because you always know the current value.
+
+**Q3: Why do we call `e.preventDefault()` on form submit?**
+
+> By default, form submission causes a full page reload (browser's native behavior). `preventDefault()` stops this so React can handle the data without refreshing the page.
+
+**Q4: Why must list items have a `key` prop?**
+
+> React uses `key` to identify which items changed, were added, or removed in a list. Without keys, React has to re-render the entire list. Keys must be unique among siblings and stable (not the array index for dynamic lists).
+
+**Q5: What is the difference between `onChange` in React and the native DOM `change` event?**
+
+> The native `change` event fires only when an input loses focus. React's `onChange` fires on every keystroke (more like `input` event). This makes controlled components work smoothly.
 
 ---
+
+## 🏠 Home Task
+
+Extend the **Todo App** with:
+1. **Edit functionality** — clicking Edit loads the todo into the input field and shows an "Update" button
+2. **Delete with confirmation** — confirm before removing a todo
+3. **Filter buttons** — "All", "Active", "Completed" (toggle done/undone)
+4. **Mark all complete** — single button to check all todos
+5. **Count display** — "3 of 7 tasks completed"
+6. Bonus: Persist todos to `localStorage` so they survive page refresh

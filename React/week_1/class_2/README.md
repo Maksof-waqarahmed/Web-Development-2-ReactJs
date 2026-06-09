@@ -1,5 +1,15 @@
 # 💎 JSX & Functional Components — The Foundation of React
 
+## 📚 Topics Covered
+- What is JSX and how it works internally (Babel)
+- JSX rules — single parent, `className`, closing tags, `{}` expressions
+- Class Components vs Functional Components
+- Arrow function components
+- Default exports vs Named exports
+- Hands-on: Portfolio Landing Page with components
+
+---
+
 ## 🧩 What is JSX?
 
 **JSX** stands for **JavaScript XML**.
@@ -264,6 +274,41 @@ function App() {
 
 ## 🧪 Hands-on Practice
 
-build a **Simple Portfolio Landing Page** using components.
+Build a **Simple Portfolio Landing Page** using components.
 
 ---
+
+## 🎯 Interview Questions
+
+**Q1: What is JSX and is it mandatory in React?**
+
+> JSX is a syntax extension that looks like HTML inside JavaScript. It is compiled by Babel into `React.createElement()` calls. JSX is not mandatory — you could write `React.createElement()` directly — but JSX makes code much more readable and is used by virtually every React developer.
+
+**Q2: What are the rules of JSX?**
+
+> 1. Must return a single root element (or use a Fragment `<>...</>`). 2. Use `className` instead of `class`. 3. All tags must be closed (`<img />`, `<br />`). 4. JavaScript expressions go inside `{}`. 5. Attributes use camelCase (`onClick`, `onChange`).
+
+**Q3: What is the difference between a class component and a functional component?**
+
+> Class components use `class` syntax and lifecycle methods (`componentDidMount`, etc.). Functional components are plain JavaScript functions — simpler, shorter, and modern. Since React 16.8 hooks were introduced, functional components can do everything class components can. Class components are now considered legacy.
+
+**Q4: What is the difference between default export and named export?**
+
+> Default export: one per file, imported without `{}` with any name. Named export: multiple per file, imported with `{}` using the exact name. Convention: use default for the main component of a file, named exports for utilities or multiple components.
+
+**Q5: What does Babel do with JSX?**
+
+> Babel transforms JSX like `<h1>Hello</h1>` into `React.createElement('h1', null, 'Hello')`. This is what the browser actually runs — JSX is purely syntactic sugar.
+
+---
+
+## 🏠 Home Task
+
+Build a **Portfolio Landing Page** with proper component architecture:
+1. `Navbar` — logo + navigation links
+2. `Hero` — your name, title, and a call-to-action button
+3. `Skills` — list of 6+ skills using a `.map()` over an array
+4. `Projects` — 3 project cards (title, description, tech used)
+5. `Footer` — copyright and social links
+6. Use default export for each component
+7. All props passed down from `App.jsx` — no hardcoded content inside components

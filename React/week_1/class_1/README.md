@@ -1,4 +1,16 @@
-# 📘 What is React?
+# 📘 What is React? — React Introduction & Project Setup
+
+## 📚 Topics Covered
+- What is React and why use it
+- Single Page Application (SPA) concept
+- Virtual DOM vs Real DOM
+- Create React App (CRA) vs Vite
+- React Frameworks (Next.js, Remix, Gatsby)
+- Setting up a project with Vite — step by step
+- Project folder structure explained
+- Component-based architecture
+
+---
 
 **React** is a **JavaScript library** created by **Facebook** in **2011** and made open-source in **2013**.
 It was built by **Jordan Walke**, a software engineer at Facebook.
@@ -385,3 +397,37 @@ You can mix small reusable components to build big pages.
 | `package.json`   | Project scripts and dependencies |
 
 ---
+
+## 🎯 Interview Questions
+
+**Q1: What is React and what problem does it solve?**
+
+> React is a JavaScript library for building user interfaces. It solves the problem of inefficient DOM updates by using a Virtual DOM that computes the minimal changes needed, making UI updates fast.
+
+**Q2: What is a Single Page Application (SPA)?**
+
+> An SPA loads one HTML page and dynamically updates the UI without full page reloads. React, Vue, and Angular are all commonly used for SPAs. Examples: Gmail, Twitter, Netflix.
+
+**Q3: What is the Virtual DOM and how does it work?**
+
+> The Virtual DOM is a lightweight JavaScript representation of the real DOM. When state changes, React creates a new Virtual DOM, diffs it against the previous one (reconciliation), and applies only the minimal required changes to the real DOM.
+
+**Q4: What is the difference between CRA and Vite?**
+
+> CRA uses Webpack which is slower to start. Vite uses ESBuild (written in Go) for near-instant dev server startup and Rollup for optimized production builds. Vite is the recommended choice for new projects.
+
+**Q5: What is component-based architecture?**
+
+> Breaking the UI into small, reusable, independent pieces called components. Each component manages its own logic and UI. They can be composed together to build complex interfaces.
+
+---
+
+## 🏠 Home Task
+
+Build a **React app with Vite** that includes:
+1. Create a new Vite React project from scratch
+2. Create at least 4 components: `Navbar`, `Hero`, `About`, `Footer`
+3. Import and use all components inside `App.jsx`
+4. Add basic inline styles or a CSS file
+5. Verify `node_modules`, `public/`, `src/`, `main.jsx` and `App.jsx` structure
+6. Run `npm run dev` and explore the folder structure in your code editor

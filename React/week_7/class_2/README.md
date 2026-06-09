@@ -1,4 +1,18 @@
-# 📝 React Forms & React Hook Form
+# 📝 React Forms & React Hook Form Library
+
+## 📚 Topics Covered
+- Manual form handling vs React Hook Form library
+- Installation and setup of React Hook Form
+- `register`, `handleSubmit`, `errors` — core API
+- Built-in validation rules (required, minLength, pattern, etc.)
+- Displaying error messages
+- `watch` — live field monitoring
+- `reset` — clearing the form
+- Default values for edit forms
+- Nested objects and arrays in forms
+- Conditional fields
+- File uploads with React Hook Form
+- Project: Student Registration Form
 
 ---
 
@@ -317,3 +331,25 @@ function AdvancedForm() {
 * Bonus: Add conditional fields (e.g., show “School Name” if Age < 18)
 
 ---
+
+## 🎯 Interview Questions
+
+**Q1: Why use React Hook Form instead of manual state management?**
+
+> React Hook Form uses uncontrolled inputs with refs internally — causing far fewer re-renders than controlled inputs with `useState`. It also provides built-in validation, error handling, and a much cleaner API. For complex forms it reduces code by 50%+.
+
+**Q2: What does `register` do in React Hook Form?**
+
+> `register(“fieldName”, validationRules)` connects an input to React Hook Form. It returns props (`ref`, `onChange`, `onBlur`, `name`) that are spread onto the input element.
+
+**Q3: How do you show validation error messages?**
+
+> Access `formState.errors.fieldName` — it contains the error object with a `message` property. Render `{errors.email && <p>{errors.email.message}</p>}` below the input.
+
+**Q4: What is the `watch` function in React Hook Form?**
+
+> `watch(“fieldName”)` returns the current live value of a field. Useful for conditional fields (show “other” input when user selects “Other”) or real-time previews.
+
+**Q5: How do you populate a form with existing data for editing?**
+
+> Pass `defaultValues` to `useForm({ defaultValues: existingData })`. React Hook Form sets all field values without `useState`. When the data changes, use `reset(newData)` to repopulate.

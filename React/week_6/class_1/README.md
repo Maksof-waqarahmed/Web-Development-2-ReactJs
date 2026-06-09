@@ -1,4 +1,17 @@
-# Quiz App
+# 🧠 Quiz App — React Project
+
+## 📚 Topics Covered
+- Fetching quiz questions from a public API
+- Managing question index with `useState`
+- Handling option selection and validation
+- Calculating and displaying score
+- Conditional rendering for results screen
+- `Options` component with props
+- Preventing question skipping
+- Shuffling answer options
+- Project: Full Quiz App with score and feedback
+
+---
 
 ```jsx
 import { useState } from "react";
@@ -125,4 +138,29 @@ export const Options = ({ correctAnswer, incorrectAnswer, onAnswer }) => {
 5. **Randomize Options:**
 
    * Shuffle **correct and incorrect answers** so the correct answer is not always last.
+
+---
+
+## 🎯 Interview Questions
+
+**Q1: How do you manage question navigation in a quiz app?**
+
+> Use an index state (`currentIndex`) that increments on "Next" click. Render the question at `questions[currentIndex]`. Check `currentIndex >= questions.length - 1` to show the results screen instead.
+
+**Q2: How do you shuffle an array in JavaScript for randomizing options?**
+
+> Use the Fisher-Yates shuffle or the common `.sort(() => Math.random() - 0.5)` pattern. For quiz options, spread all options into an array and shuffle before rendering.
+
+**Q3: How do you prevent selecting an answer after one is chosen?**
+
+> Store the selected answer in state. In the option's `onClick`, check if an answer is already selected — if yes, do nothing. Disable the option buttons once a selection is made.
+
+**Q4: How do you calculate the score?**
+
+> Maintain a `score` state. Each time `onAnswer` is called, compare the selected answer with `correctAnswer`. If they match, call `setScore(prev => prev + 1)`.
+
+**Q5: How do you display conditional results messages like "Excellent!" vs "Try Again"?**
+
+> Calculate the percentage: `(score / total) * 100`. Use a conditional: if `> 80` return "Excellent!", else if `> 50` return "Good effort!", else return "Try again!".
+
 ---

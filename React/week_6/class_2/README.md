@@ -1,3 +1,17 @@
+# 📝 Forms & Input Handling in React
+
+## 📚 Topics Covered
+- `onChange` event and the event object `e`
+- `onSubmit` and `preventDefault()`
+- Basic form validation
+- `value` vs `defaultValue`
+- Resetting forms after submission
+- Handling multiple inputs with a single state object
+- Dynamic input handling with computed property names `[e.target.name]`
+- Project: Student Feedback Portal
+
+---
+
 ## 📝 Forms and Inputs in React
 
 #### ✅ Example:
@@ -510,3 +524,27 @@ Please complete the following tasks to enhance your React-based Student Feedback
   You have submitted 5 feedbacks.
   ```
 * Update this count in real-time as feedbacks are added or deleted.
+
+---
+
+## 🎯 Interview Questions
+
+**Q1: What is the difference between `value` and `defaultValue` in a React input?**
+
+> `value` makes the input controlled — React manages its value via state. `defaultValue` sets an initial value but lets the DOM manage it after that (uncontrolled). Use `value` + `onChange` for controlled inputs.
+
+**Q2: How do you handle multiple form fields with one `onChange` handler?**
+
+> Use `name` attribute on each input and `e.target.name` as a computed key: `setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))`. This keeps all fields in a single state object.
+
+**Q3: How do you reset a form after submission?**
+
+> Set the form state back to its initial value: `setForm(initialState)`. For uncontrolled inputs, use a `ref` and set `.current.value = ""`, or use `key` prop to force re-mount.
+
+**Q4: What is `e.preventDefault()` needed for in form submission?**
+
+> It prevents the browser's default form behavior — a page reload that sends form data as a GET/POST HTTP request. React handles the data instead.
+
+**Q5: How do you show real-time validation errors?**
+
+> Maintain an `errors` state object. Validate on `onChange` (or on `onBlur` for less aggressive feedback). Show the error message below the field when `errors.fieldName` is truthy.

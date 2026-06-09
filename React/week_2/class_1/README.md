@@ -1,5 +1,15 @@
 # ⚙️ React Hooks & `useState` — The Power of State in Functional Components
 
+## 📚 Topics Covered
+- What are React Hooks
+- `useState` hook — syntax and usage
+- State vs Regular Variable
+- State immutability — why state is replaced, not mutated
+- Asynchronous state updates
+- Multiple `useState` in one component
+- Virtual DOM, Diffing, Reconciliation, React Fiber
+- Counter App project
+
 ---
 
 ## 🔹 What Are Hooks?
@@ -544,4 +554,39 @@ COMMIT PHASE
 ```
 
 <img src="./images/react1.jpg" alt="Component Update Process" />
+
 ---
+
+## 🎯 Interview Questions
+
+**Q1: What is `useState` and why do we need it?**
+
+> `useState` is a hook that lets functional components store and update values. Without it, changing a regular variable won't trigger a re-render — the UI stays outdated. `useState` tells React "this value changed, re-render this component."
+
+**Q2: What does "state is immutable" mean?**
+
+> You never directly modify the existing state value (e.g., `state.count++`). Instead, you always pass a new value to the setter. This lets React detect the change by comparing references and decide whether to re-render.
+
+**Q3: Why are state updates asynchronous?**
+
+> React batches multiple state updates together and processes them in one render cycle for performance. This means the new state value is not available immediately after calling the setter — it's available in the next render.
+
+**Q4: What is the difference between `setCount(count + 1)` and `setCount(prev => prev + 1)`?**
+
+> The second form (functional update) is safer when the new state depends on the old state. In async scenarios or when multiple updates happen, `prev` always refers to the most recent state, while `count` might be stale.
+
+**Q5: What triggers a re-render in React?**
+
+> 1. A `useState` setter is called with a new value. 2. A `useReducer` dispatch changes state. 3. The parent re-renders and passes new props. 4. A `useContext` value changes.
+
+---
+
+## 🏠 Home Task
+
+Build a **Multi-Feature Counter App**:
+1. Counter with Increment (+1), Decrement (-1), Reset (0) buttons
+2. Prevent count from going below 0
+3. A "Step" input — user can set step size (default 1), counter increments/decrements by that step
+4. Color changer: 3 buttons that change the background color of the counter display
+5. Show how many times the counter has been incremented total (separate from count)
+6. Bonus: Save the count in `localStorage` so it persists on page refresh

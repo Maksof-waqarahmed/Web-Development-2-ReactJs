@@ -1,4 +1,16 @@
-# ⚛️ React Hooks Deep Dive
+# ⚛️ React Hooks Deep Dive — `useRef` & Custom Hooks
+
+## 📚 Topics Covered
+- `useRef` hook — DOM access and persistent values
+- Storing previous state with `useRef`
+- Creating custom hooks — what, why, and how
+- `useLocalStorage` custom hook
+- `useWindowWidth` custom hook
+- `useToggle` and `useDebounce` patterns
+- Debouncing explained with search filter example
+- Hook best practices and rules
+
+---
 
 ## `useRef`, Custom Hooks, Best Practices, and Debouncing Example
 
@@ -398,3 +410,38 @@ export default SearchFilter;
 * Keep Hooks **simple, reusable, and testable**.
 
 ---
+
+## 🎯 Interview Questions
+
+**Q1: What is `useRef` and how is it different from `useState`?**
+
+> Both store values, but `useRef` does **not trigger a re-render** when its `.current` value changes. Use `useRef` for DOM access or mutable values that don't need to affect the UI (like timers, previous values, focus management).
+
+**Q2: When would you use `useRef` instead of `useState`?**
+
+> When you need: 1) Direct DOM access (focusing an input, measuring size). 2) Storing the previous value of state. 3) Mutable variables like interval IDs or subscription objects that shouldn't cause re-renders.
+
+**Q3: What is a custom hook?**
+
+> A custom hook is a regular JavaScript function whose name starts with `use` and calls other hooks inside. It allows you to extract and reuse stateful logic across components — like `useFetch`, `useDebounce`, `useLocalStorage`.
+
+**Q4: What is debouncing and why is it useful?**
+
+> Debouncing delays executing a function until after a specified wait time has elapsed since the last call. Useful for search inputs — without it, every keystroke fires an API call. With debouncing, the call only happens after the user stops typing.
+
+**Q5: Can a custom hook maintain its own state?**
+
+> Yes. Each component that calls a custom hook gets its own independent state. The hook logic is shared, but the state is not — it's separate per component instance.
+
+---
+
+## 🏠 Home Task
+
+Build a **Smart Search App** using custom hooks:
+1. `useDebounce(value, delay)` — debounce any value
+2. `useLocalStorage(key, defaultValue)` — persist state to localStorage
+3. `useFetch(url)` — returns `{ data, loading, error }` — reusable fetch hook
+4. A search input that uses `useDebounce` (500ms) before calling an API
+5. Search history stored in `localStorage` using `useLocalStorage`
+6. Previous search results shown while new ones load (using `useRef` to store previous data)
+7. Bonus: `useWindowWidth` hook — show "Mobile" / "Tablet" / "Desktop" based on screen width

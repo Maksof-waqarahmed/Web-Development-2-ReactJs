@@ -1,4 +1,14 @@
-# **React Context API**
+# 🌐 React Context API — Global State Without Prop Drilling
+
+## 📚 Topics Covered
+- Prop drilling problem — why it's painful
+- Context API as the solution
+- `createContext`, `Provider`, `useContext` — the three building blocks
+- User data context example
+- Theme context (light/dark mode)
+- Auth context (login/logout state)
+- Multiple contexts — nesting providers
+- Combined provider pattern for cleaner code
 
 ---
 
@@ -369,5 +379,40 @@ export default function App() {
 👉 Now it’s **cleaner** and still works the same.
 
 ---
+
+## 🎯 Interview Questions
+
+**Q1: What problem does the Context API solve?**
+
+> Prop drilling — passing data through many intermediate components that don’t need it. Context provides a way to share data globally within a component tree without explicitly passing props at every level.
+
+**Q2: What are the three main pieces of Context API?**
+
+> 1. `createContext()` — creates the context object. 2. `Provider` — wraps the component tree and provides the value. 3. `useContext(MyContext)` — consumes the value in any descendant component.
+
+**Q3: Does every component re-render when a Context value changes?**
+
+> Yes — every component that calls `useContext(MyContext)` will re-render when the context value changes, even if the specific part of the value they use didn’t change. This is why large apps use multiple focused contexts or state management libraries like Redux/Zustand.
+
+**Q4: When should you use Context API vs props?**
+
+> Use props for data that’s specific to a parent-child relationship. Use Context for genuinely global data shared across many components: current user, theme, language, authentication state.
+
+**Q5: Can you have multiple contexts in one app?**
+
+> Yes. Each context has its own Provider and value. Nesting providers lets different contexts coexist. A common pattern is a single `AppProviders` component that nests all providers.
+
+---
+
+## 🏠 Home Task
+
+Build a **Theme + Auth App** using Context API:
+1. `ThemeContext` — light/dark mode, toggle button accessible from anywhere
+2. `AuthContext` — `user` object, `login(name)`, `logout()` functions
+3. `CartContext` — `items`, `addItem(product)`, `removeItem(id)`, `total` computed value
+4. `Navbar` uses all three contexts: shows username, theme toggle, cart count
+5. `ProductPage` — add to cart button (uses CartContext)
+6. `ProfilePage` — shows user info, logout button (uses AuthContext)
+7. All providers combined in `AppProviders.jsx`
 
 

@@ -1,4 +1,15 @@
-# **Routing in React**
+# 🗺️ Routing in React — React Router DOM
+
+## 📚 Topics Covered
+- What is routing — client-side vs server-side
+- `react-router-dom` installation and setup
+- `BrowserRouter`, `Routes`, `Route` components
+- `Link` component — navigation without page reload
+- Dynamic routes with `useParams`
+- Nested routing and `Outlet`
+- `createBrowserRouter` — modern configuration-based routing
+- `RouterProvider`
+- Project: Product list with dynamic product detail pages
 
 ---
 
@@ -456,3 +467,29 @@ export default function App() {
 3. When user clicks a product, open its **detail page** dynamically (`/products/:id`).
 4. Add a **Back button** on detail page.
 5. Bonus 🌟: Implement **Category Filter** (Men, Women, Electronics, etc).
+
+---
+
+## 🎯 Interview Questions
+
+**Q1: What is client-side routing?**
+
+> In client-side routing, the browser handles navigation without making a new request to the server. JavaScript intercepts the URL change and renders the correct component. This makes transitions instant — no full page reloads.
+
+**Q2: What is the difference between `Link` and an `<a>` tag in React?**
+
+> `<a href>` causes a full page reload, losing all React state. `Link` from React Router changes the URL and renders the new component client-side — without any page reload or state loss.
+
+**Q3: What is `useParams` and when do you use it?**
+
+> `useParams` returns an object containing the dynamic segments of the current URL. Used when you have a route like `/products/:id` — calling `useParams()` gives `{ id: "42" }` so you can fetch the right data.
+
+**Q4: What is the difference between `BrowserRouter` and `createBrowserRouter`?**
+
+> `BrowserRouter` wraps JSX routes declaratively. `createBrowserRouter` (React Router v6.4+) takes a configuration array and supports advanced features like data loaders, actions, and error elements. It's the recommended modern approach.
+
+**Q5: What is an `Outlet` in React Router?**
+
+> `Outlet` is a placeholder in a parent route's component where child route components are rendered. It's what makes nested routing work — the parent layout stays rendered while the child content changes.
+
+---

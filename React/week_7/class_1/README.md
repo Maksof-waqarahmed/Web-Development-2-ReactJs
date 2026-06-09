@@ -1,5 +1,17 @@
 # 📁 React File Uploads & Preview
 
+## 📚 Topics Covered
+- `<input type="file" />` handling in React
+- Single and multiple file selection
+- File preview using `URL.createObjectURL()`
+- Cleaning up object URLs to avoid memory leaks
+- Removing selected files from preview
+- File type and size validation
+- Uploading files to a server using `FormData`
+- Project: My Photo Album (upload, preview, gallery, remove)
+
+---
+
 React allows you to handle **file uploads** natively using the `<input type="file" />` element. You can also show a **preview** before uploading.
 
 ---
@@ -491,3 +503,38 @@ export default App;
 ```
 
 ---
+
+## 🎯 Interview Questions
+
+**Q1: How do you read a selected file in React?**
+
+> Access `e.target.files` in the `onChange` handler — it's a `FileList` object. Convert to array with `Array.from(e.target.files)` to use array methods.
+
+**Q2: How do you create a preview URL for an image file?**
+
+> Use `URL.createObjectURL(file)` — it creates a temporary blob URL. Set it as the `src` of an `<img>`. Important: call `URL.revokeObjectURL(url)` when the preview is no longer needed to free memory.
+
+**Q3: How do you upload a file to a server from React?**
+
+> Use `FormData`: create a new `FormData()`, call `.append("file", file)`, then pass it as the `body` of a `fetch` POST request. Do NOT set `Content-Type` header — the browser sets it automatically with the correct boundary.
+
+**Q4: How do you validate file type before upload?**
+
+> Check `file.type` (e.g., `"image/png"`) or `file.name.endsWith(".pdf")`. Reject files that don't match and show an error message.
+
+**Q5: How do you handle multiple file uploads?**
+
+> Add `multiple` attribute to `<input type="file" multiple />`. In `onChange`, `e.target.files` will contain all selected files. Loop over them with `Array.from()`.
+
+---
+
+## 🏠 Home Task
+
+Complete the **My Photo Album** app with full features:
+1. Upload single or multiple images at once
+2. Preview selected images before adding to album
+3. Validate: only image files allowed, max 5MB per file
+4. Add to album gallery — show in a responsive grid
+5. Remove individual photos from the gallery
+6. Show file name and size under each preview
+7. Bonus: Implement drag and drop upload using `onDragOver` and `onDrop` events

@@ -1,5 +1,14 @@
 # ⚛️ Conditional Rendering in React
 
+## 📚 Topics Covered
+- What is conditional rendering and why it matters
+- `if / else` — logic outside JSX
+- Ternary operator `? :` — inline conditions
+- Logical `&&` operator — render only when true
+- Logical `||` operator — fallback values
+- `switch` statement — multiple cases
+- Common mistakes and best practices
+
 ---
 
 ## 🧩 What is Conditional Rendering?
@@ -313,3 +322,37 @@ export default function OrExample() {
 | `switch`    | Multiple UI outcomes    | `switch(status) { ... }`          |               |            |   |           |
 
 ---
+
+## 🎯 Interview Questions
+
+**Q1: What is conditional rendering in React?**
+
+> Showing different UI based on a condition — equivalent to `if/else` in JavaScript but inside JSX. React uses plain JS operators instead of a special template syntax like Vue's `v-if`.
+
+**Q2: What is the difference between `&&` and ternary for conditional rendering?**
+
+> `&&` is for show/hide: `{isLogged && <Dashboard />}`. Ternary shows one of two things: `{isLogged ? <Dashboard /> : <Login />}`. Use `&&` when there's no "else" case.
+
+**Q3: Why can `{count && <p>{count}</p>}` render `0` in the DOM?**
+
+> When `count` is `0`, JavaScript renders the number `0` (falsy but not `false`). Fix: use `{count > 0 && <p>...</p>}` or `{!!count && <p>...</p>}`.
+
+**Q4: Can you use `if/else` directly inside JSX?**
+
+> No — `if/else` is a statement, not an expression. Move it above the `return`, or use ternary/`&&` inside JSX.
+
+**Q5: When is `switch` better than ternary for conditional rendering?**
+
+> When there are 3 or more states with different UI — e.g., `"loading" | "error" | "empty" | "success"`. A `switch` is cleaner and more readable than nested ternaries.
+
+---
+
+## 🏠 Home Task
+
+Build a **User Dashboard** with conditional rendering:
+1. Login/Logout toggle — show `<Dashboard />` when logged in, `<LoginForm />` when not
+2. Greeting with the user's name after login
+3. Notification bell — show badge count if `notifications > 0`, hide if 0
+4. Profile completion: "Just started" (< 30%), "Almost there" (30–80%), "Complete!" (> 80%)
+5. Theme toggle button — switch between light/dark background
+6. Bonus: Online status indicator — "Online" / "Away" / "Offline" using `switch`

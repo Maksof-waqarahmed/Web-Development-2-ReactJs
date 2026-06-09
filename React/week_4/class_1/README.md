@@ -1,4 +1,15 @@
-# ⚛️ Understanding the Rules of Hooks in React
+# ⚛️ Rules of Hooks, `useEffect` & Data Fetching
+
+## 📚 Topics Covered
+- The 2 Rules of Hooks (top-level, React functions only)
+- Why these rules exist — React's call order dependency
+- `useEffect` hook — mount, update, unmount lifecycle
+- `useEffect` dependencies array
+- Cleanup function in `useEffect`
+- `fetch` API vs `axios` — full comparison
+- `async/await` inside `useEffect`
+- `AbortController` — request cancellation
+- Project: Movie Search App
 
 ---
 
@@ -701,3 +712,39 @@ export default MovieSearch;
 ```
 
 ---
+
+## 🎯 Interview Questions
+
+**Q1: What are the 2 Rules of Hooks?**
+
+> 1. Only call hooks at the **top level** — never inside loops, conditions, or nested functions. 2. Only call hooks from **React functional components** or custom hooks — not regular JavaScript functions. These rules ensure React can maintain hook call order between renders.
+
+**Q2: What are the three phases of `useEffect`?**
+
+> Mount (runs after first render), Update (runs after re-render when dependencies change), Unmount (cleanup function runs when component is removed). The dependency array controls when the effect re-runs.
+
+**Q3: What does an empty dependency array `[]` mean in `useEffect`?**
+
+> The effect runs once after the first render and never again — equivalent to `componentDidMount` in class components.
+
+**Q4: What is the difference between `fetch` and `axios`?**
+
+> `fetch` is native browser API — needs manual JSON parsing, no automatic error handling for non-2xx status. `axios` is a library with automatic JSON parsing, automatic error throwing for non-2xx responses, request/response interceptors, and better request cancellation support.
+
+**Q5: What is the cleanup function in `useEffect` and when do you need it?**
+
+> The optional function returned from `useEffect` — runs when the component unmounts or before the effect re-runs. Use it to cancel API requests (AbortController), clear timers, or unsubscribe from subscriptions to avoid memory leaks.
+
+---
+
+## 🏠 Home Task
+
+Build a **News Feed App**:
+1. Fetch top headlines from a news API (e.g., NewsAPI or GNews)
+2. Show article title, description, image, and source
+3. Loading spinner while fetching
+4. Error message if fetch fails
+5. Search input — debounced (wait 500ms), fetches new results on change
+6. Category tabs: Technology, Sports, Business, Health — each triggers a new fetch
+7. Use `AbortController` to cancel previous request when category changes
+8. Bonus: Implement `useEffect` cleanup to prevent state updates on unmounted component

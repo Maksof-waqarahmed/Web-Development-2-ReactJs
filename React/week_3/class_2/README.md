@@ -1,4 +1,16 @@
-# 🎯 **React Props (Properties)
+# 🎯 React Props (Properties)
+
+## 📚 Topics Covered
+- What are props and why they are read-only
+- Passing multiple props to a component
+- Destructuring props
+- Default props
+- Props can be any data type (string, number, array, object, function)
+- Passing functions as props — child to parent communication
+- State lifting up pattern
+- `children` prop
+- Prop spreading
+- Prop drilling problem and Context API as solution
 
 ---
 
@@ -604,3 +616,37 @@ function GrandChild({ userName }) {
 🩵 **Solution:** Use **Context API** to avoid prop drilling.
 
 ---
+
+## 🎯 Interview Questions
+
+**Q1: What are props in React?**
+
+> Props (properties) are read-only data passed from a parent component to a child component. They are the primary way to pass data down the component tree.
+
+**Q2: Why are props read-only?**
+
+> Props being read-only enforces a one-directional data flow (parent → child). If a child could modify props, it would create unpredictable shared mutable state. To send data back up, pass a callback function as a prop.
+
+**Q3: What is the difference between props and state?**
+
+> State is internal, mutable data owned by a component. Props are external, read-only data passed from outside. State changes trigger re-renders; props are updated when the parent re-renders with new values.
+
+**Q4: What is prop drilling and why is it a problem?**
+
+> Prop drilling is passing props through multiple intermediate components that don't need them, just to reach a deeply nested child. It creates unnecessary coupling and makes refactoring painful. Solution: Context API or state management libraries.
+
+**Q5: What is the `children` prop?**
+
+> `children` is a special prop that contains whatever JSX is written between a component's opening and closing tags. It's used for wrapper/layout components like modals, cards, and containers.
+
+---
+
+## 🏠 Home Task
+
+Build a **Reusable Card System**:
+1. `UserCard` component with props: `name`, `email`, `avatar`, `role`
+2. `ProductCard` component with props: `title`, `price`, `image`, `rating`
+3. A `Badge` component receiving `label` and `color` as props with a default color
+4. Parent `App.jsx` renders a list of 5 UserCards and 5 ProductCards by mapping over arrays
+5. Pass a `onDelete` callback from App to each card — clicking "Remove" calls it with the item's id
+6. Demonstrate state lifting: clicking a card selects it, selected card shows a different border color
