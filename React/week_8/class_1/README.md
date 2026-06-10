@@ -1,170 +1,428 @@
-# ⚡ React Performance Optimization
+# 📁 React File Uploads & Preview
 
 ## 📚 Topics Covered
-- Why unnecessary re-renders slow down React apps
-- `React.memo` — prevent child component re-renders
-- Custom comparison function with `React.memo`
-- `useMemo` — cache expensive calculation results
-- `useCallback` — cache function references
-- When to use each — decision flowchart
-- Referential equality — why objects/functions break memo
-- Common mistakes and when NOT to memoize
-- Project: Optimized Todo App with memoization
+- `<input type="file" />` handling in React
+- Single and multiple file selection
+- File preview using `URL.createObjectURL()`
+- Cleaning up object URLs to avoid memory leaks
+- Removing selected files from preview
+- File type and size validation
+- Uploading files to a server using `FormData`
+- Project: My Photo Album (upload, preview, gallery, remove)
 
 ---
 
-## `React.memo`, `useMemo`, `useCallback` — Stop Unnecessary Re-renders
+React allows you to handle **file uploads** natively using the `<input type="file" />` element. You can also show a **preview** before uploading.
 
 ---
 
-## 🔹 Why Performance Matters?
+## 🧠 1. Basic Concept
 
-By default, **every time a parent component re-renders, all its child components also re-render** — even if their props haven't changed.
-
-This is usually fine for small apps, but in large apps it causes **sluggish UI**.
-
-```mermaid
-graph TD
-    A[Parent Re-renders] --> B[Child 1 Re-renders]
-    A --> C[Child 2 Re-renders]
-    A --> D[Child 3 Re-renders]
-    B --> E[Even if Props didn't change!]
-    C --> E
-    D --> E
-    style E fill:#ff6b6b,color:#fff
-```
-
-**Solution:** `React.memo`, `useMemo`, `useCallback`
+1. **File input**: `<input type="file" />` lets users select files from their system.
+2. **File object**: Browsers return selected files as **File objects**.
+3. **State management**: Use `useState` to store selected files.
+4. **Preview**: Use `URL.createObjectURL(file)` to display the file.
 
 ---
 
-## 🔹 1. `React.memo` — Prevent Child Re-render
-
-### 🧠 What is it?
-
-`React.memo` is a **Higher Order Component (HOC)** that wraps a functional component and **memoizes** it — meaning it only re-renders if its **props actually changed**.
-
-### 🧩 Syntax
+## 🔹 2. Handling File Input in React
 
 ```jsx
-const MyComponent = React.memo(function MyComponent(props) {
-  return <div>{props.name}</div>;
-});
-```
+import React, { useState } from "react";
 
----
+function FileUpload() {
+  const [file, setFile] = useState(null);
 
-### 📍 Problem Without React.memo
+  const handleChange = (e) => {
+    setFile(e.target.files[0]); // Store the selected file in state
+  };
 
-```jsx
-import { useState } from "react";
-
-// This re-renders every time parent renders
-function Greeting({ name }) {
-  console.log("Greeting rendered!");
-  return <h2>Hello, {name}!</h2>;
-}
-
-function App() {
-  const [count, setCount] = useState(0);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Selected File:", file);
+  };
 
   return (
-    <div>
-      <Greeting name="Ali" />
-      <button onClick={() => setCount(count + 1)}>
-        Count: {count}
-      </button>
-    </div>
+    <form onSubmit={handleSubmit}>
+      <input type="file" onChange={handleChange} />
+      <button type="submit">Upload</button>
+    </form>
   );
 }
+
+export default FileUpload;
 ```
 
-Every button click → `Greeting` re-renders even though `name` prop never changed!
+✅ **Explanation**:
+
+* `e.target.files` returns an array of selected files.
+* `files[0]` is used because usually one file is selected.
+* The file is stored in `useState` for further processing (upload or preview).
 
 ---
 
-### ✅ Solution With React.memo
+## 🔹 3. File Preview
+
+### 📌 Preview Images
 
 ```jsx
-import { useState, memo } from "react";
+import React, { useState } from "react";
 
-// Now only re-renders if 'name' prop changes
-const Greeting = memo(function Greeting({ name }) {
-  console.log("Greeting rendered!");
-  return <h2>Hello, {name}!</h2>;
-});
+function FilePreview() {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
 
-function App() {
-  const [count, setCount] = useState(0);
+  const handleChange = (e) => {
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+
+    // Generate preview URL
+    if (selectedFile) {
+      const previewUrl = URL.createObjectURL(selectedFile);
+      setPreview(previewUrl);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("File Submitted:", file);
+  };
 
   return (
-    <div>
-      <Greeting name="Ali" />
-      <button onClick={() => setCount(count + 1)}>
-        Count: {count}
-      </button>
-    </div>
+    <form onSubmit={handleSubmit}>
+      <input type="file" onChange={handleChange} />
+      {preview && (
+        <div>
+          <h4>Preview:</h4>
+          <img
+            src={preview}
+            alt="Preview"
+            style={{ width: "200px", height: "200px", objectFit: "cover" }}
+          />
+        </div>
+      )}
+      <button type="submit">Upload</button>
+    </form>
   );
 }
+
+export default FilePreview;
 ```
 
-Now `Greeting` only re-renders when `name` prop changes. ✅
+✅ **Explanation**:
+
+* `URL.createObjectURL(file)` creates a temporary URL to display the file in `<img>`.
+* This method works for **images only**.
+* `preview && ...` ensures preview shows only if a file is selected.
 
 ---
 
-### 📍 Custom Comparison Function
-
-By default `React.memo` does **shallow comparison**. For objects/arrays, you can provide custom comparison:
+## 🔹 4. Handling Multiple File Uploads
 
 ```jsx
-const UserCard = memo(
-  function UserCard({ user }) {
-    return <div>{user.name} - {user.age}</div>;
-  },
-  (prevProps, nextProps) => {
-    // Return true = skip re-render (props are "equal")
-    // Return false = re-render
-    return prevProps.user.id === nextProps.user.id;
+import React, { useState } from "react";
+
+function MultipleFiles() {
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+
+  const handleChange = (e) => {
+    const selectedFiles = Array.from(e.target.files); // Convert FileList to Array
+    setFiles(selectedFiles);
+
+    // Generate multiple previews
+    const previewUrls = selectedFiles.map((file) => URL.createObjectURL(file));
+    setPreviews(previewUrls);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Files Submitted:", files);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input type="file" multiple onChange={handleChange} />
+      {previews.length > 0 && (
+        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+          {previews.map((src, index) => (
+            <img
+              key={index}
+              src={src}
+              alt={`Preview ${index}`}
+              style={{ width: "100px", height: "100px", objectFit: "cover" }}
+            />
+          ))}
+        </div>
+      )}
+      <button type="submit">Upload All</button>
+    </form>
+  );
+}
+
+export default MultipleFiles;
+```
+
+✅ **Explanation**:
+
+* `multiple` attribute allows users to select multiple files.
+* `Array.from(e.target.files)` converts FileList to an array for easier manipulation.
+* Previews are displayed using `map()`.
+
+---
+
+## 🔹 5. Removing Selected File Before Upload
+
+```jsx
+const removeFile = (index) => {
+  const updatedFiles = [...files];
+  updatedFiles.splice(index, 1);
+  setFiles(updatedFiles);
+
+  const updatedPreviews = [...previews];
+  updatedPreviews.splice(index, 1);
+  setPreviews(updatedPreviews);
+};
+```
+
+* Add a **remove button** below each preview image to allow users to delete a selected file.
+
+---
+
+## 🔹 6. Uploading Files to Server
+
+Without any library, you can use **`FormData`**:
+
+```jsx
+const handleUpload = async () => {
+  const formData = new FormData();
+  formData.append("file", file); // for single file
+  // for multiple files: files.forEach(f => formData.append("files", f))
+
+  const response = await fetch("/upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await response.json();
+  console.log("Upload Response:", data);
+};
+```
+
+✅ **Explanation**:
+
+* `FormData` automatically sets `Content-Type` to `multipart/form-data`.
+* Works with **file inputs** and other form fields simultaneously.
+
+---
+
+## 🔹 7. Handling File Type & Size Validation
+
+```jsx
+const handleChange = (e) => {
+  const selectedFile = e.target.files[0];
+
+  if (!selectedFile.type.startsWith("image/")) {
+    alert("Only image files are allowed!");
+    return;
   }
-);
+
+  if (selectedFile.size > 2 * 1024 * 1024) {
+    alert("File size should be less than 2MB");
+    return;
+  }
+
+  setFile(selectedFile);
+  setPreview(URL.createObjectURL(selectedFile));
+};
+```
+
+* Validates **file type** and **size** before upload.
+* Enhances UX and prevents invalid files from being uploaded.
+
+---
+
+## 🔹 8. Cleaning Up Object URLs
+
+To prevent **memory leaks**, always revoke URLs after component unmount:
+
+```jsx
+useEffect(() => {
+  return () => {
+    if (preview) URL.revokeObjectURL(preview);
+  };
+}, [preview]);
 ```
 
 ---
 
-## 🔹 2. `useMemo` — Memoize Expensive Calculations
-
-### 🧠 What is it?
-
-`useMemo` **caches the result of a calculation** between re-renders. It only recalculates when its **dependencies change**.
-
-### 🧩 Syntax
+## 🔹 9. Complete Example — Single Image Upload with Preview
 
 ```jsx
-const result = useMemo(() => {
-  return expensiveCalculation(a, b);
-}, [a, b]); // only recalculate when a or b changes
+import React, { useState, useEffect } from "react";
+
+function FileUploadPreview() {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+
+  const handleChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    if (!selectedFile.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    setFile(selectedFile);
+    setPreview(URL.createObjectURL(selectedFile));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!file) return;
+    console.log("Uploading:", file);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input type="file" onChange={handleChange} />
+      {preview && <img src={preview} alt="Preview" width={200} />}
+      <button type="submit">Upload</button>
+    </form>
+  );
+}
+
+export default FileUploadPreview;
 ```
 
 ---
 
-### 📍 Problem Without useMemo
+## ✅ Summary / Best Practices
+
+| Topic          | Best Practices                                        |
+| -------------- | ----------------------------------------------------- |
+| File Input     | Use `type="file"`, store in state                     |
+| Preview        | Use `URL.createObjectURL()`                           |
+| Multiple Files | Use `multiple` attribute and `Array.from()`           |
+| Remove Files   | Maintain preview & files array, provide remove option |
+| Validation     | Check type & size before uploading                    |
+| Uploading      | Use `FormData`, POST via fetch                        |
+| Cleanup        | Revoke object URLs on unmount (`URL.revokeObjectURL`) |
+
+---
+
+# 🏠 Project: **“My Photo Album”**
+
+### **Project Description:**
+
+A simple React app where users (kids) can **upload images**, see a **preview**, and maintain a **small photo album gallery** on the page.
+
+No backend required – files just stay in memory/state.
+
+---
+
+## **Features**
+
+1. **Upload Single or Multiple Images**
+
+   * Select one or many images from your computer.
+   * Show a preview before adding them to the album.
+
+2. **Preview Before Adding**
+
+   * Display the image immediately after selection using `URL.createObjectURL`.
+
+3. **Add to Album**
+
+   * Once happy with preview, click **“Add to Album”**.
+   * Image gets added to a gallery below.
+
+4. **Remove Images**
+
+   * Remove unwanted images from the album.
+
+5. **Drag & Drop (Optional Advanced)**
+
+   * Users can drag files onto a box to upload images.
+
+6. **Simple Styling**
+
+   * Images arranged nicely in a grid.
+   * Hover effects or borders to make it fun.
+
+---
+
+## **Folder Structure (React)**
+
+```
+my-photo-album/
+│
+├─ src/
+│  ├─ components/
+│  │  ├─ FileUploader.jsx
+│  │  └─ PhotoGallery.jsx
+│  ├─ App.jsx
+│  └─ index.js
+├─ package.json
+└─ README.md
+```
+
+---
+
+## **Example Code**
+
+### **FileUploader.jsx**
 
 ```jsx
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-function App() {
-  const [count, setCount] = useState(0);
-  const [items] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+export default function FileUploader({ addToAlbum }) {
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
 
-  // This runs on EVERY render — even when count changes!
-  const total = items.reduce((sum, item) => sum + item, 0);
+  const handleChange = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedFiles(files);
+
+    const previewUrls = files.map((file) => URL.createObjectURL(file));
+    setPreviews(previewUrls);
+  };
+
+  const handleAddToAlbum = () => {
+    addToAlbum(selectedFiles, previews);
+    setSelectedFiles([]);
+    setPreviews([]);
+  };
+
+  useEffect(() => {
+    return () => previews.forEach((url) => URL.revokeObjectURL(url));
+  }, [previews]);
 
   return (
     <div>
-      <p>Total: {total}</p>
-      <button onClick={() => setCount(count + 1)}>
-        Count: {count}
-      </button>
+      <input type="file" multiple onChange={handleChange} />
+      {previews.length > 0 && (
+        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+          {previews.map((url, index) => (
+            <img
+              key={index}
+              src={url}
+              alt={`Preview ${index}`}
+              style={{ width: "100px", height: "100px", objectFit: "cover" }}
+            />
+          ))}
+        </div>
+      )}
+      {previews.length > 0 && (
+        <button onClick={handleAddToAlbum}>Add to Album</button>
+      )}
     </div>
   );
 }
@@ -172,71 +430,38 @@ function App() {
 
 ---
 
-### ✅ Solution With useMemo
+### **PhotoGallery.jsx**
 
 ```jsx
-import { useState, useMemo } from "react";
+import React from "react";
 
-function App() {
-  const [count, setCount] = useState(0);
-  const [items] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-
-  // Only recalculates when 'items' changes
-  const total = useMemo(() => {
-    console.log("Calculating total...");
-    return items.reduce((sum, item) => sum + item, 0);
-  }, [items]);
-
+export default function PhotoGallery({ album, removePhoto }) {
   return (
-    <div>
-      <p>Total: {total}</p>
-      <button onClick={() => setCount(count + 1)}>
-        Count: {count}
-      </button>
-    </div>
-  );
-}
-```
-
----
-
-### 📍 Real World Example — Filtered List
-
-```jsx
-import { useState, useMemo } from "react";
-
-const products = [
-  { id: 1, name: "Laptop", price: 1200, category: "Electronics" },
-  { id: 2, name: "Phone", price: 800, category: "Electronics" },
-  { id: 3, name: "Shirt", price: 50, category: "Clothing" },
-  { id: 4, name: "Shoes", price: 120, category: "Clothing" },
-  { id: 5, name: "Headphones", price: 200, category: "Electronics" },
-];
-
-function ProductList() {
-  const [search, setSearch] = useState("");
-  const [darkMode, setDarkMode] = useState(false);
-
-  // Only recalculates when 'search' changes — not when darkMode changes!
-  const filteredProducts = useMemo(() => {
-    console.log("Filtering products...");
-    return products.filter((p) =>
-      p.name.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [search]);
-
-  return (
-    <div style={{ background: darkMode ? "#333" : "#fff", padding: 20 }}>
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search products..."
-      />
-      <button onClick={() => setDarkMode(!darkMode)}>Toggle Theme</button>
-
-      {filteredProducts.map((p) => (
-        <div key={p.id}>
-          {p.name} — ${p.price}
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "20px" }}>
+      {album.map((photo, index) => (
+        <div key={index} style={{ position: "relative" }}>
+          <img
+            src={photo.preview}
+            alt={`Album ${index}`}
+            style={{ width: "150px", height: "150px", objectFit: "cover", borderRadius: "8px" }}
+          />
+          <button
+            onClick={() => removePhoto(index)}
+            style={{
+              position: "absolute",
+              top: "5px",
+              right: "5px",
+              background: "red",
+              color: "white",
+              border: "none",
+              borderRadius: "50%",
+              width: "25px",
+              height: "25px",
+              cursor: "pointer"
+            }}
+          >
+            ×
+          </button>
         </div>
       ))}
     </div>
@@ -246,311 +471,70 @@ function ProductList() {
 
 ---
 
-## 🔹 3. `useCallback` — Memoize Functions
-
-### 🧠 What is it?
-
-`useCallback` **caches a function** between re-renders. Without it, every render creates a **new function reference** — which breaks `React.memo` on child components.
-
-### 🧩 Syntax
+### **App.jsx**
 
 ```jsx
-const memoizedFn = useCallback(() => {
-  doSomething(a, b);
-}, [a, b]); // only recreate when a or b changes
-```
-
----
-
-### 📍 Problem Without useCallback
-
-```jsx
-import { useState, memo } from "react";
-
-const Button = memo(function Button({ onClick, label }) {
-  console.log(`Button "${label}" rendered`);
-  return <button onClick={onClick}>{label}</button>;
-});
+import React, { useState } from "react";
+import FileUploader from "./components/FileUploader";
+import PhotoGallery from "./components/PhotoGallery";
 
 function App() {
-  const [count, setCount] = useState(0);
-  const [name, setName] = useState("Ali");
+  const [album, setAlbum] = useState([]);
 
-  // New function created on EVERY render!
-  // React.memo can't help because the function reference always changes
-  const handleClick = () => {
-    console.log("clicked!");
+  const addToAlbum = (files, previews) => {
+    const newPhotos = files.map((file, index) => ({ file, preview: previews[index] }));
+    setAlbum((prev) => [...prev, ...newPhotos]);
+  };
+
+  const removePhoto = (index) => {
+    setAlbum((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
-    <div>
-      <Button onClick={handleClick} label="Click Me" />
-      <button onClick={() => setCount(count + 1)}>Count: {count}</button>
-    </div>
-  );
-}
-```
-
-`Button` still re-renders even with `memo` because `handleClick` is a new function every render!
-
----
-
-### ✅ Solution With useCallback
-
-```jsx
-import { useState, memo, useCallback } from "react";
-
-const Button = memo(function Button({ onClick, label }) {
-  console.log(`Button "${label}" rendered`);
-  return <button onClick={onClick}>{label}</button>;
-});
-
-function App() {
-  const [count, setCount] = useState(0);
-
-  // Same function reference across renders
-  const handleClick = useCallback(() => {
-    console.log("clicked!");
-  }, []); // empty deps = never recreate
-
-  return (
-    <div>
-      <Button onClick={handleClick} label="Click Me" />
-      <button onClick={() => setCount(count + 1)}>Count: {count}</button>
-    </div>
-  );
-}
-```
-
-Now `Button` only renders once! ✅
-
----
-
-### 📍 useCallback with Dependencies
-
-```jsx
-import { useState, useCallback } from "react";
-
-function Counter() {
-  const [count, setCount] = useState(0);
-
-  // Recreate when 'count' changes (because it uses count)
-  const handleIncrement = useCallback(() => {
-    setCount(count + 1);
-  }, [count]);
-
-  // Better pattern — use functional update (no dependency needed!)
-  const handleIncrementBetter = useCallback(() => {
-    setCount((prev) => prev + 1);
-  }, []); // no dependencies needed!
-
-  return (
-    <div>
-      <p>{count}</p>
-      <button onClick={handleIncrementBetter}>+</button>
-    </div>
-  );
-}
-```
-
----
-
-## 🔹 When to Use What?
-
-```mermaid
-flowchart TD
-    A[Performance Problem?] --> B{What type?}
-    B --> C[Child re-renders too much]
-    B --> D[Expensive calculation runs too much]
-    B --> E[Function causes child re-renders]
-    C --> F[Use React.memo on child]
-    D --> G[Use useMemo]
-    E --> H[Use useCallback]
-    F --> I[Also need useCallback if passing functions as props]
-    style F fill:#4caf50,color:#fff
-    style G fill:#2196f3,color:#fff
-    style H fill:#9c27b0,color:#fff
-```
-
----
-
-## 🔹 Complete Real World Example
-
-```jsx
-import { useState, useMemo, useCallback, memo } from "react";
-
-// Child component — wrapped with memo
-const TodoItem = memo(function TodoItem({ todo, onDelete }) {
-  console.log("TodoItem rendered:", todo.text);
-  return (
-    <div style={{ display: "flex", gap: 10, padding: 8, border: "1px solid #ddd", marginBottom: 8 }}>
-      <span style={{ textDecoration: todo.done ? "line-through" : "none" }}>
-        {todo.text}
-      </span>
-      <button onClick={() => onDelete(todo.id)}>❌</button>
-    </div>
-  );
-});
-
-let nextId = 1;
-
-function TodoApp() {
-  const [todos, setTodos] = useState([
-    { id: nextId++, text: "Learn React", done: false },
-    { id: nextId++, text: "Build Projects", done: true },
-    { id: nextId++, text: "Get a Job", done: false },
-  ]);
-  const [filter, setFilter] = useState("all"); // all | active | done
-  const [newTodo, setNewTodo] = useState("");
-
-  // useMemo: only recalculates when todos or filter changes
-  const filteredTodos = useMemo(() => {
-    if (filter === "active") return todos.filter((t) => !t.done);
-    if (filter === "done") return todos.filter((t) => t.done);
-    return todos;
-  }, [todos, filter]);
-
-  // useMemo: counts
-  const stats = useMemo(() => ({
-    total: todos.length,
-    done: todos.filter((t) => t.done).length,
-    active: todos.filter((t) => !t.done).length,
-  }), [todos]);
-
-  // useCallback: stable function reference for child component
-  const handleDelete = useCallback((id) => {
-    setTodos((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  const handleAdd = useCallback(() => {
-    if (!newTodo.trim()) return;
-    setTodos((prev) => [...prev, { id: nextId++, text: newTodo, done: false }]);
-    setNewTodo("");
-  }, [newTodo]);
-
-  return (
-    <div style={{ maxWidth: 500, margin: "0 auto", padding: 20 }}>
-      <h2>📝 Todo App</h2>
-
-      {/* Stats */}
-      <div style={{ background: "#f0f0f0", padding: 10, borderRadius: 8, marginBottom: 16 }}>
-        Total: {stats.total} | Active: {stats.active} | Done: {stats.done}
-      </div>
-
-      {/* Add */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <input
-          value={newTodo}
-          onChange={(e) => setNewTodo(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          placeholder="Add todo..."
-          style={{ flex: 1, padding: 8 }}
-        />
-        <button onClick={handleAdd}>Add</button>
-      </div>
-
-      {/* Filter */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {["all", "active", "done"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            style={{ fontWeight: filter === f ? "bold" : "normal" }}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
-
-      {/* List */}
-      {filteredTodos.map((todo) => (
-        <TodoItem key={todo.id} todo={todo} onDelete={handleDelete} />
-      ))}
+    <div style={{ padding: "20px" }}>
+      <h1>📸 My Photo Album</h1>
+      <FileUploader addToAlbum={addToAlbum} />
+      <PhotoGallery album={album} removePhoto={removePhoto} />
     </div>
   );
 }
 
-export default TodoApp;
+export default App;
 ```
-
----
-
-## 🔹 Common Mistakes ❌
-
-### 1. Overusing useMemo/useCallback
-
-```jsx
-// ❌ DON'T — simple values don't need memoization
-const name = useMemo(() => "Ali", []); // unnecessary!
-
-// ✅ DO — only for expensive calculations
-const sorted = useMemo(() => bigArray.sort(compareFn), [bigArray]);
-```
-
-### 2. Wrong Dependencies
-
-```jsx
-// ❌ Missing dependency
-const getTotal = useCallback(() => {
-  return price * quantity; // uses quantity but not in deps!
-}, [price]); // BUG: stale quantity
-
-// ✅ Correct
-const getTotal = useCallback(() => {
-  return price * quantity;
-}, [price, quantity]);
-```
-
-### 3. Forgetting React.memo for useCallback to work
-
-```jsx
-// ❌ useCallback alone won't help if child isn't memo'd
-function Child({ onClick }) { ... } // not memo'd
-
-// ✅ Must use BOTH
-const Child = memo(function Child({ onClick }) { ... });
-const handleClick = useCallback(() => {...}, []);
-```
-
----
-
-## 🔹 Summary Table
-
-| Tool | Purpose | When to Use |
-|------|---------|-------------|
-| `React.memo` | Skip child re-render if props same | Child re-renders unnecessarily |
-| `useMemo` | Cache calculation result | Expensive calculation runs too often |
-| `useCallback` | Cache function reference | Passing functions as props to memo'd children |
 
 ---
 
 ## 🎯 Interview Questions
 
-**Q1: What is the difference between `useMemo` and `useCallback`?**
+**Q1: How do you read a selected file in React?**
 
-> `useMemo` caches a **value** (result of a function). `useCallback` caches the **function itself**. `useMemo(() => fn, deps)` ≈ `useCallback(fn, deps)`.
+> Access `e.target.files` in the `onChange` handler — it's a `FileList` object. Convert to array with `Array.from(e.target.files)` to use array methods.
 
-**Q2: When should you NOT use React.memo?**
+**Q2: How do you create a preview URL for an image file?**
 
-> When the component is cheap to render, or when props change on almost every render — memoization overhead would outweigh the benefit.
+> Use `URL.createObjectURL(file)` — it creates a temporary blob URL. Set it as the `src` of an `<img>`. Important: call `URL.revokeObjectURL(url)` when the preview is no longer needed to free memory.
 
-**Q3: Can you use useMemo inside a condition or loop?**
+**Q3: How do you upload a file to a server from React?**
 
-> No! This violates the Rules of Hooks. Hooks must always be called at the top level.
+> Use `FormData`: create a new `FormData()`, call `.append("file", file)`, then pass it as the `body` of a `fetch` POST request. Do NOT set `Content-Type` header — the browser sets it automatically with the correct boundary.
 
-**Q4: What is "referential equality" and why does it matter?**
+**Q4: How do you validate file type before upload?**
 
-> In JavaScript, `{} === {}` is `false` — two objects with same values are not equal. React.memo uses `===` to compare props, so object/function props always look "different" unless you use `useMemo`/`useCallback`.
+> Check `file.type` (e.g., `"image/png"`) or `file.name.endsWith(".pdf")`. Reject files that don't match and show an error message.
+
+**Q5: How do you handle multiple file uploads?**
+
+> Add `multiple` attribute to `<input type="file" multiple />`. In `onChange`, `e.target.files` will contain all selected files. Loop over them with `Array.from()`.
 
 ---
 
 ## 🏠 Home Task
 
-Build a **Product Search App** with:
-1. A list of 20+ products (name, price, category)
-2. Search input that filters by name
-3. Sort by price (ascending/descending)
-4. Use `useMemo` for filtering and sorting
-5. Product card component wrapped with `React.memo`
-6. Delete button — use `useCallback` for the handler
-7. Check browser console to verify unnecessary renders are eliminated
+Complete the **My Photo Album** app with full features:
+1. Upload single or multiple images at once
+2. Preview selected images before adding to album
+3. Validate: only image files allowed, max 5MB per file
+4. Add to album gallery — show in a responsive grid
+5. Remove individual photos from the gallery
+6. Show file name and size under each preview
+7. Bonus: Implement drag and drop upload using `onDragOver` and `onDrop` events

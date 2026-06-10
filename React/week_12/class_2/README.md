@@ -1,472 +1,598 @@
-# 🚀 Deploying React Apps
+# 🧩 React Component Patterns
 
 ## 📚 Topics Covered
-- What is deployment and how the build process works
-- `npm run build` — what it creates in `dist/`
-- Vercel vs Netlify — comparison
-- Vercel CLI deployment
-- Vercel via GitHub — automatic deploys on every push
-- Netlify drag & drop and CLI
-- Netlify via GitHub integration
-- Environment variables in deployment dashboards
-- React Router fix — `_redirects` (Netlify) and `vercel.json`
-- Custom domain setup
-- Preview deployments for pull requests
-- Continuous deployment workflow
-- Common deployment issues and fixes
+- Higher Order Components (HOC) — wrap and enhance components
+- `withLoading`, `withAuth`, `withLogger` HOC examples
+- HOC caveats — displayName, props forwarding
+- Render Props pattern — flexible rendering with shared logic
+- Children as function pattern
+- Compound Components — grouped UI sharing implicit state via Context
+- Custom Select component with compound pattern
+- Accordion compound component example
+- When to use HOC vs Render Props vs Compound Components vs Custom Hooks
 
 ---
 
-## Vercel & Netlify — From Local to Live in Minutes
+## HOC, Render Props, Compound Components, forwardRef
 
 ---
 
-## 🔹 What is Deployment?
+## 🔹 Why Patterns?
 
-Deployment = your app goes from `localhost:5173` on your computer to a **live URL** that anyone in the world can visit.
+As apps grow, you need ways to **share logic and behavior** between components without repeating code. These patterns are the classic solutions — still used in many real-world codebases and libraries.
 
 ```mermaid
-graph LR
-    A[Your Computer\nlocalhost:5173] --> B[npm run build]
-    B --> C[dist/ folder\nHTML + CSS + JS]
-    C --> D[Upload to Server]
-    D --> E[Live URL\nhttps://myapp.vercel.app ✅]
+graph TD
+    A[Code Reuse Problem] --> B[HOC - Higher Order Components]
+    A --> C[Render Props]
+    A --> D[Compound Components]
+    A --> E[Custom Hooks - Modern Way]
+    B --> F[Wrap component, inject behavior]
+    C --> G[Pass render logic as function]
+    D --> H[Share implicit state via Context]
     style E fill:#4caf50,color:#fff
 ```
 
 ---
 
-## 🔹 Build Process — What Happens?
+## 🔹 1. Higher Order Components (HOC)
 
-Before deploying, React needs to be **built** (compiled for production):
+### 🧠 What is it?
 
-```bash
-npm run build
-```
-
-This creates a `dist/` folder (Vite) or `build/` folder (CRA) with:
-- Minified JavaScript
-- Optimized CSS
-- Compressed images
-- `index.html`
+A **Higher Order Component** is a function that takes a component and returns a **new, enhanced component**. Think of it like a decorator.
 
 ```
-dist/
-├── index.html
-├── assets/
-│   ├── index-abc123.js    ← all your JS, minified
-│   ├── index-def456.css   ← all your CSS, minified
-│   └── logo-xyz789.png    ← optimized images
+HOC = (Component) => EnhancedComponent
 ```
 
 ---
 
-## 🔹 Deployment Options Comparison
-
-| Platform | Free Tier | Custom Domain | CI/CD | Best For |
-|----------|-----------|---------------|-------|----------|
-| **Vercel** | ✅ Generous | ✅ Free | ✅ Auto from git | React, Next.js |
-| **Netlify** | ✅ Generous | ✅ Free | ✅ Auto from git | React, Static sites |
-| **GitHub Pages** | ✅ Free | ✅ (custom) | Manual setup | Simple static |
-| **Firebase Hosting** | ✅ Free | ✅ Free | Manual/CI | Google ecosystem |
-
----
-
-## 🔹 1. Vercel Deployment
-
-Vercel was made by the creators of Next.js and has **first-class React support**.
-
-### Method 1: Deploy via Vercel CLI
-
-```bash
-# Step 1: Install Vercel CLI
-npm install -g vercel
-
-# Step 2: Login
-vercel login
-
-# Step 3: In your project folder — deploy!
-vercel
-
-# Follow the prompts:
-# ? Set up and deploy? Y
-# ? Which scope? (your account)
-# ? Link to existing project? N
-# ? Project name: my-react-app
-# ? Directory: ./
-# ✓ Deployed! https://my-react-app.vercel.app
-```
-
-### Method 2: Deploy via GitHub (Recommended — Auto-deploys!)
-
-1. Push your code to GitHub
-2. Go to **vercel.com** → Sign up with GitHub
-3. Click **"Add New Project"**
-4. Import your GitHub repository
-5. Configure:
-
-```
-Framework Preset: Vite (or Create React App)
-Build Command: npm run build
-Output Directory: dist  ← (Vite) or build (CRA)
-Install Command: npm install
-```
-
-6. Click **"Deploy"**
-7. Get your live URL: `https://your-project.vercel.app`
-
-**Auto-deploy:** Every `git push` to main branch → automatic deployment! 🎉
-
----
-
-### Vercel — Environment Variables
-
-```bash
-# In Vercel Dashboard → Your Project → Settings → Environment Variables
-
-# Add each variable:
-VITE_API_URL = https://api.myapp.com
-VITE_APP_NAME = My App
-```
-
-Or via CLI:
-```bash
-vercel env add VITE_API_URL
-# Enter value: https://api.myapp.com
-# Select environments: Production, Preview, Development
-```
-
----
-
-### Vercel — Custom Domain
-
-```bash
-# Via CLI
-vercel domains add myapp.com
-
-# Or in Dashboard → Domains → Add Domain
-# 1. Enter: myapp.com
-# 2. Add DNS records to your domain registrar
-# 3. SSL certificate auto-generated ✅
-```
-
----
-
-## 🔹 2. Netlify Deployment
-
-### Method 1: Drag & Drop (Quickest!)
-
-```bash
-# Step 1: Build your project
-npm run build
-
-# Step 2: Go to app.netlify.com
-# Step 3: Drag your dist/ folder to the deploy zone
-# Done! Live in seconds ✅
-```
-
-### Method 2: Netlify CLI
-
-```bash
-# Install
-npm install -g netlify-cli
-
-# Login
-netlify login
-
-# Initialize and deploy
-netlify init
-
-# Follow prompts:
-# ? Create & configure a new site
-# ? Team: (your team)
-# ? Site name: my-react-app
-# ? Build command: npm run build
-# ? Directory to deploy: dist
-# ✓ Deployed: https://my-react-app.netlify.app
-
-# Deploy again anytime
-netlify deploy --prod
-```
-
-### Method 3: GitHub Integration (Recommended)
-
-1. Go to **netlify.com** → Log in with GitHub
-2. Click **"Add new site"** → **"Import an existing project"**
-3. Choose GitHub → Select your repository
-4. Configure:
-
-```
-Branch to deploy: main
-Build command: npm run build
-Publish directory: dist
-```
-
-5. Click **"Deploy site"**
-6. Auto-deploys on every push! ✅
-
----
-
-### Netlify — Environment Variables
-
-In Netlify Dashboard → Site Settings → Environment Variables:
-
-```
-VITE_API_URL = https://api.myapp.com
-VITE_APP_NAME = My Production App
-```
-
----
-
-### Netlify — `_redirects` File for React Router
-
-⚠️ **Important!** React Router uses client-side routing. When you deploy, visiting `myapp.netlify.app/about` directly returns a 404 because the server doesn't know about that route.
-
-**Fix:** Create `public/_redirects` file:
-
-```
-/*    /index.html   200
-```
-
-This tells Netlify to always serve `index.html` and let React Router handle routing.
-
-**For Vite**, create the file at `public/_redirects` (Vite copies `public/` to `dist/` automatically).
-
----
-
-### Vercel — Router Fix
-
-For Vercel, create `vercel.json` at project root:
-
-```json
-{
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
-```
-
----
-
-## 🔹 Complete Deployment Checklist
-
-```mermaid
-flowchart TD
-    A[Ready to Deploy?] --> B[npm run build - no errors?]
-    B --> C[All env variables ready?]
-    C --> D[React Router fix added?]
-    D --> E{Choose Platform}
-    E --> F[Vercel]
-    E --> G[Netlify]
-    F --> H[Push to GitHub\nVercel auto-deploys]
-    G --> I[Push to GitHub\nNetlify auto-deploys]
-    H --> J[Add env vars in Vercel dashboard]
-    I --> K[Add env vars in Netlify dashboard]
-    J --> L[Test live URL ✅]
-    K --> L
-```
-
----
-
-## 🔹 Step-by-Step: Full Deploy to Vercel
-
-```bash
-# 1. Make sure your project is ready
-npm run build
-# Check: no errors, dist/ folder created
-
-# 2. Initialize git if not already
-git init
-git add .
-git commit -m "Initial commit"
-
-# 3. Push to GitHub
-# Create new repo on github.com first, then:
-git remote add origin https://github.com/yourusername/my-react-app.git
-git branch -M main
-git push -u origin main
-
-# 4. Go to vercel.com
-# - Sign in with GitHub
-# - Click "New Project"
-# - Select your repo
-# - Framework: Vite
-# - Build: npm run build
-# - Output: dist
-# - Click Deploy!
-
-# 5. Add environment variables in Vercel dashboard
-# Settings → Environment Variables → Add each VITE_ variable
-
-# 6. Redeploy after adding env vars
-# Deployments → ... → Redeploy
-
-# Your app is live! 🎉
-```
-
----
-
-## 🔹 Continuous Deployment Workflow
-
-After setup, your workflow becomes:
-
-```bash
-# Make changes to code
-# ...
-
-# Commit and push
-git add .
-git commit -m "Add new feature"
-git push
-
-# Vercel/Netlify automatically:
-# 1. Detects the push
-# 2. Runs npm run build
-# 3. Deploys the new version
-# 4. Your live site is updated ✅
-```
-
----
-
-## 🔹 Preview Deployments
-
-Both Vercel and Netlify create **preview URLs** for pull requests:
-
-```bash
-# Create a feature branch
-git checkout -b feature/new-design
-
-# Make changes, commit, push
-git push origin feature/new-design
-
-# Vercel creates a preview URL:
-# https://my-app-git-feature-new-design-username.vercel.app
-
-# Show client/teammate before merging to main!
-```
-
----
-
-## 🔹 Custom Domain Setup
-
-```bash
-# Example: you bought "myapp.pk" on Namecheap/GoDaddy
-
-# In Vercel:
-# 1. Dashboard → Domains → Add
-# 2. Enter: myapp.pk
-# 3. Vercel shows you DNS records to add
-
-# In your domain registrar (Namecheap):
-# DNS Settings → Add records:
-# Type: A, Name: @, Value: 76.76.21.21 (Vercel IP)
-# Type: CNAME, Name: www, Value: cname.vercel-dns.com
-
-# Wait 24-48 hours for DNS propagation
-# SSL certificate auto-generated by Vercel ✅
-
-# Your site: https://myapp.pk ✅
-```
-
----
-
-## 🔹 Common Deployment Issues & Fixes
-
-### Issue 1: Build Fails
-
-```bash
-# Check locally first
-npm run build
-
-# Common causes:
-# - TypeScript/ESLint errors
-# - Missing env variables
-# - Import case sensitivity (Mac is forgiving, Linux is not!)
-```
-
-### Issue 2: Blank Page After Deploy
+### 📍 Example 1: withLoading HOC
 
 ```jsx
-// Check vite.config.js — base path might be wrong
-export default defineConfig({
-  base: "/",  // ← should be "/" for Vercel/Netlify
-  plugins: [react()],
-})
-```
+// HOC that adds loading state to any component
+function withLoading(WrappedComponent) {
+  return function WithLoadingComponent({ isLoading, ...props }) {
+    if (isLoading) {
+      return (
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          padding: 40,
+          fontSize: 18,
+          color: "#666",
+        }}>
+          ⏳ Loading...
+        </div>
+      );
+    }
 
-### Issue 3: API Calls Fail in Production
+    return <WrappedComponent {...props} />;
+  };
+}
 
-```bash
-# Check env variables are set in deployment platform
-# Check CORS — your backend must allow your production domain
-# Check VITE_ prefix is present
-```
+// Original component — knows nothing about loading
+function UserList({ users }) {
+  return (
+    <ul>
+      {users.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
 
-### Issue 4: Routes Return 404
+// Enhanced component with loading built in
+const UserListWithLoading = withLoading(UserList);
 
-```bash
-# For Netlify — create public/_redirects:
-/*    /index.html   200
+// Usage
+function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [users, setUsers] = useState([]);
 
-# For Vercel — create vercel.json:
-{
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  useEffect(() => {
+    setTimeout(() => {
+      setUsers([{ id: 1, name: "Ali" }, { id: 2, name: "Sara" }]);
+      setIsLoading(false);
+    }, 2000);
+  }, []);
+
+  return <UserListWithLoading isLoading={isLoading} users={users} />;
 }
 ```
 
 ---
 
-## 🔹 `.env` Files for Deployment
+### 📍 Example 2: withAuth HOC (Route Protection)
 
-```bash
-# .env.example (commit to git — shows team what's needed)
-VITE_API_URL=https://your-api-url.com
-VITE_APP_NAME=My App
+```jsx
+import { Navigate } from "react-router-dom";
 
-# .env.production (add these values in Vercel/Netlify dashboard — DON'T commit)
-VITE_API_URL=https://api.myapp.com
-VITE_APP_NAME=My Production App
+function withAuth(WrappedComponent) {
+  return function AuthenticatedComponent(props) {
+    const isAuthenticated = localStorage.getItem("token");
+
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace />;
+    }
+
+    return <WrappedComponent {...props} />;
+  };
+}
+
+// Protect any page with one line
+const ProtectedDashboard = withAuth(Dashboard);
+const ProtectedProfile = withAuth(Profile);
+const ProtectedSettings = withAuth(Settings);
+
+// In routes
+<Route path="/dashboard" element={<ProtectedDashboard />} />
+<Route path="/profile" element={<ProtectedProfile />} />
 ```
+
+---
+
+### 📍 Example 3: withLogger HOC
+
+```jsx
+function withLogger(WrappedComponent) {
+  return function LoggedComponent(props) {
+    useEffect(() => {
+      console.log(`[${WrappedComponent.name}] mounted with props:`, props);
+      return () => {
+        console.log(`[${WrappedComponent.name}] unmounted`);
+      };
+    }, []);
+
+    useEffect(() => {
+      console.log(`[${WrappedComponent.name}] props updated:`, props);
+    });
+
+    return <WrappedComponent {...props} />;
+  };
+}
+
+const LoggedButton = withLogger(Button);
+const LoggedUserCard = withLogger(UserCard);
+```
+
+---
+
+### ⚠️ HOC Caveats
+
+```jsx
+// Problem 1: DisplayName lost in DevTools
+// Fix: set displayName
+function withLoading(WrappedComponent) {
+  function WithLoading(props) { ... }
+  WithLoading.displayName = `withLoading(${WrappedComponent.displayName || WrappedComponent.name})`;
+  return WithLoading;
+}
+
+// Problem 2: Props are forwarded automatically — make sure to spread
+function withAuth(WrappedComponent) {
+  return function Auth(props) {
+    if (!isAuth) return <Navigate to="/login" />;
+    return <WrappedComponent {...props} />; // ← must spread ALL props
+  };
+}
+```
+
+---
+
+## 🔹 2. Render Props
+
+### 🧠 What is it?
+
+A component receives a **function as a prop** and calls that function to render its output. The component provides **data/behavior**, you decide **what to render**.
+
+```
+<Component render={(data) => <YourUI data={data} />} />
+```
+
+---
+
+### 📍 Example 1: Mouse Tracker
+
+```jsx
+// Provides mouse position logic
+function MouseTracker({ render }) {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e) => {
+    setPosition({ x: e.clientX, y: e.clientY });
+  };
+
+  return (
+    <div style={{ height: "100vh" }} onMouseMove={handleMouseMove}>
+      {render(position)} {/* Call render prop with data */}
+    </div>
+  );
+}
+
+// Different UIs using the same mouse tracking logic
+function App() {
+  return (
+    <>
+      {/* Use 1: Show coordinates */}
+      <MouseTracker
+        render={({ x, y }) => (
+          <p>Mouse: {x}, {y}</p>
+        )}
+      />
+
+      {/* Use 2: Follow cursor */}
+      <MouseTracker
+        render={({ x, y }) => (
+          <div
+            style={{
+              position: "fixed",
+              left: x,
+              top: y,
+              width: 20,
+              height: 20,
+              background: "red",
+              borderRadius: "50%",
+              transform: "translate(-50%, -50%)",
+              pointerEvents: "none",
+            }}
+          />
+        )}
+      />
+    </>
+  );
+}
+```
+
+---
+
+### 📍 Example 2: Data Fetcher with Render Props
+
+```jsx
+function DataFetcher({ url, render }) {
+  const [state, setState] = useState({
+    data: null,
+    loading: true,
+    error: null,
+  });
+
+  useEffect(() => {
+    setState({ data: null, loading: true, error: null });
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) => setState({ data, loading: false, error: null }))
+      .catch((err) => setState({ data: null, loading: false, error: err.message }));
+  }, [url]);
+
+  return render(state);
+}
+
+// Usage — completely flexible rendering
+function App() {
+  return (
+    <DataFetcher
+      url="https://jsonplaceholder.typicode.com/users"
+      render={({ data, loading, error }) => {
+        if (loading) return <div>⏳ Loading...</div>;
+        if (error) return <div>❌ Error: {error}</div>;
+        return (
+          <ul>
+            {data.map((user) => (
+              <li key={user.id}>{user.name} — {user.email}</li>
+            ))}
+          </ul>
+        );
+      }}
+    />
+  );
+}
+```
+
+---
+
+### 📍 Children as Function (Common Pattern)
+
+```jsx
+// Same as render prop, but uses children
+function Toggle({ children }) {
+  const [on, setOn] = useState(false);
+  return children({ on, toggle: () => setOn(!on) });
+}
+
+function App() {
+  return (
+    <Toggle>
+      {({ on, toggle }) => (
+        <div>
+          <p>The toggle is {on ? "ON" : "OFF"}</p>
+          <button onClick={toggle}>Toggle</button>
+        </div>
+      )}
+    </Toggle>
+  );
+}
+```
+
+---
+
+## 🔹 3. Compound Components
+
+### 🧠 What is it?
+
+Compound components work together as a group — like `<select>` and `<option>` in HTML. They **share implicit state** through React Context, so the parent manages state while children can access it.
+
+---
+
+### 📍 Example: Custom Select Component
+
+```jsx
+import { createContext, useContext, useState } from "react";
+
+// Context for sharing state between compound components
+const SelectContext = createContext(null);
+
+// Parent — owns the state
+function Select({ children, value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <SelectContext.Provider value={{ value, onChange, isOpen, setIsOpen }}>
+      <div style={{ position: "relative", display: "inline-block" }}>
+        {children}
+      </div>
+    </SelectContext.Provider>
+  );
+}
+
+// Trigger — shows current value, opens/closes
+Select.Trigger = function Trigger({ placeholder = "Select..." }) {
+  const { value, isOpen, setIsOpen } = useContext(SelectContext);
+  return (
+    <button
+      onClick={() => setIsOpen(!isOpen)}
+      style={{
+        padding: "8px 16px",
+        border: "1px solid #ddd",
+        borderRadius: 4,
+        background: "#fff",
+        cursor: "pointer",
+        minWidth: 150,
+        display: "flex",
+        justifyContent: "space-between",
+      }}
+    >
+      {value || placeholder}
+      <span>{isOpen ? "▲" : "▼"}</span>
+    </button>
+  );
+};
+
+// Options container
+Select.Options = function Options({ children }) {
+  const { isOpen } = useContext(SelectContext);
+  if (!isOpen) return null;
+  return (
+    <div style={{
+      position: "absolute",
+      top: "100%",
+      left: 0,
+      right: 0,
+      background: "#fff",
+      border: "1px solid #ddd",
+      borderRadius: 4,
+      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+      zIndex: 100,
+    }}>
+      {children}
+    </div>
+  );
+};
+
+// Individual option
+Select.Option = function Option({ value, children }) {
+  const { value: selectedValue, onChange, setIsOpen } = useContext(SelectContext);
+  const isSelected = selectedValue === value;
+
+  return (
+    <div
+      onClick={() => {
+        onChange(value);
+        setIsOpen(false);
+      }}
+      style={{
+        padding: "8px 16px",
+        cursor: "pointer",
+        background: isSelected ? "#e3f2fd" : "#fff",
+        fontWeight: isSelected ? "bold" : "normal",
+      }}
+    >
+      {children}
+    </div>
+  );
+};
+
+// Usage — clean and intuitive!
+function App() {
+  const [country, setCountry] = useState("");
+
+  return (
+    <div style={{ padding: 20 }}>
+      <Select value={country} onChange={setCountry}>
+        <Select.Trigger placeholder="Select country..." />
+        <Select.Options>
+          <Select.Option value="pk">🇵🇰 Pakistan</Select.Option>
+          <Select.Option value="us">🇺🇸 United States</Select.Option>
+          <Select.Option value="uk">🇬🇧 United Kingdom</Select.Option>
+          <Select.Option value="ae">🇦🇪 UAE</Select.Option>
+        </Select.Options>
+      </Select>
+
+      {country && <p>Selected: {country}</p>}
+    </div>
+  );
+}
+```
+
+---
+
+### 📍 Example 2: Accordion Compound Component
+
+```jsx
+import { createContext, useContext, useState } from "react";
+
+const AccordionContext = createContext(null);
+
+function Accordion({ children, defaultOpen = null }) {
+  const [openItem, setOpenItem] = useState(defaultOpen);
+
+  const toggle = (id) => setOpenItem(openItem === id ? null : id);
+
+  return (
+    <AccordionContext.Provider value={{ openItem, toggle }}>
+      <div style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}>
+        {children}
+      </div>
+    </AccordionContext.Provider>
+  );
+}
+
+Accordion.Item = function Item({ id, children }) {
+  return <div style={{ borderBottom: "1px solid #ddd" }}>{children}</div>;
+};
+
+Accordion.Header = function Header({ id, children }) {
+  const { openItem, toggle } = useContext(AccordionContext);
+  const isOpen = openItem === id;
+
+  return (
+    <button
+      onClick={() => toggle(id)}
+      style={{
+        width: "100%",
+        padding: "12px 16px",
+        background: isOpen ? "#e3f2fd" : "#fff",
+        border: "none",
+        textAlign: "left",
+        cursor: "pointer",
+        display: "flex",
+        justifyContent: "space-between",
+        fontWeight: isOpen ? "bold" : "normal",
+      }}
+    >
+      {children}
+      <span>{isOpen ? "▲" : "▼"}</span>
+    </button>
+  );
+};
+
+Accordion.Content = function Content({ id, children }) {
+  const { openItem } = useContext(AccordionContext);
+  if (openItem !== id) return null;
+
+  return (
+    <div style={{ padding: "12px 16px", background: "#fafafa" }}>
+      {children}
+    </div>
+  );
+};
+
+// Usage
+function FAQ() {
+  return (
+    <div style={{ maxWidth: 600, margin: "0 auto", padding: 20 }}>
+      <h2>Frequently Asked Questions</h2>
+      <Accordion defaultOpen="q1">
+        <Accordion.Item id="q1">
+          <Accordion.Header id="q1">What is React?</Accordion.Header>
+          <Accordion.Content id="q1">
+            React is a JavaScript library for building user interfaces.
+          </Accordion.Content>
+        </Accordion.Item>
+
+        <Accordion.Item id="q2">
+          <Accordion.Header id="q2">What are hooks?</Accordion.Header>
+          <Accordion.Content id="q2">
+            Hooks are functions that let you use state and lifecycle features in functional components.
+          </Accordion.Content>
+        </Accordion.Item>
+
+        <Accordion.Item id="q3">
+          <Accordion.Header id="q3">What is Context API?</Accordion.Header>
+          <Accordion.Content id="q3">
+            Context API allows you to share state across components without prop drilling.
+          </Accordion.Content>
+        </Accordion.Item>
+      </Accordion>
+    </div>
+  );
+}
+```
+
+---
+
+## 🔹 Patterns Comparison
+
+```mermaid
+graph LR
+    A[Need to reuse logic?] --> B{What kind?}
+    B --> C[Wrap component + inject props]
+    B --> D[Share state/behavior, flexible render]
+    B --> E[Group of related components sharing state]
+    C --> F[HOC]
+    D --> G[Render Props]
+    E --> H[Compound Components]
+    G --> I[Or Modern: Custom Hook]
+    style F fill:#ff9800,color:#fff
+    style G fill:#9c27b0,color:#fff
+    style H fill:#2196f3,color:#fff
+    style I fill:#4caf50,color:#fff
+```
+
+| Pattern | Best For | Example Libraries |
+|---------|----------|------------------|
+| HOC | Cross-cutting concerns (auth, logging, loading) | Redux connect(), React Router withRouter |
+| Render Props | Flexible rendering with shared logic | Downshift, React Motion |
+| Compound Components | Grouped UI with shared state | Radix UI, Headless UI |
+| Custom Hooks | Logic reuse (modern React) | SWR, React Query |
 
 ---
 
 ## 🎯 Interview Questions
 
-**Q1: What is the difference between `npm run dev` and `npm run build`?**
+**Q1: What is a Higher Order Component?**
 
-> `npm run dev` starts a development server with hot reloading, unminified code, and source maps — for development only. `npm run build` creates an optimized production bundle with minified code, tree-shaking, and code splitting — for deployment.
+> A function that takes a component and returns a new enhanced component. It's used to add cross-cutting behavior (auth, loading, logging) without modifying the original component.
 
-**Q2: Why do React Router routes 404 on direct access after deployment?**
+**Q2: What problem do Render Props solve?**
 
-> React Router handles routing client-side in the browser. When you directly visit `/about`, the server looks for a file at that path — which doesn't exist. The fix is to redirect all requests to `index.html` and let React Router take over.
+> They allow sharing stateful logic or behavior between components without HOCs. The component owning the logic calls a function prop to render UI — the consumer decides what to render.
 
-**Q3: What is Continuous Deployment?**
+**Q3: How do Compound Components work internally?**
 
-> Automated deployment triggered by code pushes. When you `git push` to main, the platform (Vercel/Netlify) automatically builds and deploys your app without any manual steps.
+> They use React Context to share implicit state between the parent and its child sub-components. The parent manages state and provides it through Context; children read from Context without needing explicit prop passing.
 
-**Q4: Can you have different API URLs for preview vs production deployments?**
+**Q4: Are HOCs and Render Props replaced by hooks?**
 
-> Yes! Vercel and Netlify let you set environment variables per environment (Production, Preview, Development). Preview deployments can point to a staging API while production points to the live API.
+> Custom hooks can replace most HOC and render props use cases with cleaner code. But HOCs are still common for wrapping entire components (like auth protection), and compound components are still the best pattern for complex UI groups.
 
 ---
 
-## 🏠 Final Project — Deploy Your Portfolio!
+## 🏠 Home Task
 
-Deploy a complete React Portfolio App:
-1. Build a portfolio with: Home, About, Projects, Contact pages
-2. Use React Router for navigation
-3. Fetch GitHub repos using TanStack Query
-4. Store any API keys in `.env` with `VITE_` prefix
-5. Add `vercel.json` for React Router support
-6. Deploy to Vercel via GitHub
-7. Set environment variables in Vercel dashboard
-8. Test all routes directly (not from homepage nav)
-9. Share your live URL! 🎉
+Build a **Tabs Component** using Compound Components:
 
-**Bonus:**
-- Add a custom domain
-- Set up preview deployments for a feature branch
-- Show the deployment URL in your README
+```jsx
+// Target API:
+<Tabs defaultTab="about">
+  <Tabs.List>
+    <Tabs.Tab id="about">About</Tabs.Tab>
+    <Tabs.Tab id="projects">Projects</Tabs.Tab>
+    <Tabs.Tab id="contact">Contact</Tabs.Tab>
+  </Tabs.List>
+  <Tabs.Panel id="about"><AboutContent /></Tabs.Panel>
+  <Tabs.Panel id="projects"><ProjectsContent /></Tabs.Panel>
+  <Tabs.Panel id="contact"><ContactContent /></Tabs.Panel>
+</Tabs>
+```
+
+Also add a `withErrorBoundary` HOC and wrap each Panel with it.

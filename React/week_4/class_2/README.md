@@ -1,447 +1,342 @@
-# ⚛️ React Hooks Deep Dive — `useRef` & Custom Hooks
+# 🔄 `useReducer` + Context — Global State Without Redux
 
 ## 📚 Topics Covered
-- `useRef` hook — DOM access and persistent values
-- Storing previous state with `useRef`
-- Creating custom hooks — what, why, and how
-- `useLocalStorage` custom hook
-- `useWindowWidth` custom hook
-- `useToggle` and `useDebounce` patterns
-- Debouncing explained with search filter example
-- Hook best practices and rules
+- Why combine `useReducer` with Context API
+- The "React Redux" pattern using only built-in hooks
+- Creating a global store with Context + useReducer
+- Custom `useStore` hook for clean access
+- Auth state management example
+- Shopping Cart global state example
+- When this pattern is enough vs when to use Redux
 
 ---
 
-## `useRef`, Custom Hooks, Best Practices, and Debouncing Example
+## 🔹 Why Combine useReducer + Context?
 
----
+`useReducer` alone manages state in one component. When you need that state **globally** (accessible from any component), combine it with Context API.
 
-## 🔹 1. `useRef` Hook — DOM Access & Persistent Values
-
-### 🧠 What is `useRef`?
-
-`useRef` is a that gives you a **mutable reference** to store values that **persist between re-renders** — **without causing a re-render**.
-
-It can be used for:
-
-* Accessing and interacting with **DOM elements**
-* Storing **previous values**
-* Maintaining **mutable variables** that don’t trigger re-rendering
-
----
-
-### 🧩 Syntax
-
-```jsx
-const refName = useRef(initialValue);
+```mermaid
+graph TD
+    A[useReducer - owns state + dispatch] --> B[Context Provider - shares it globally]
+    B --> C[Any child component can useContext]
+    C --> D[Read state]
+    C --> E[Call dispatch to update]
+    style A fill:#9c27b0,color:#fff
+    style B fill:#2196f3,color:#fff
 ```
 
-* `refName.current` → stores the current value.
-* The value **does not reset** across re-renders.
+This pattern is often called **"Poor Man's Redux"** — it gives you centralized state management without installing any library.
 
 ---
 
-### 📍 Example 1: Accessing DOM Elements
+## 🔹 The Pattern
 
 ```jsx
-import { useRef } from "react";
+// 1. Create context
+const StoreContext = createContext(null);
 
-function FocusInput() {
-  const inputRef = useRef(null);
+// 2. Define reducer
+function reducer(state, action) { ... }
 
-  const focusInput = () => {
-    inputRef.current.focus(); // direct DOM access
-  };
-
+// 3. Create Provider
+function StoreProvider({ children }) {
+  const [state, dispatch] = useReducer(reducer, initialState);
   return (
-    <div>
-      <input ref={inputRef} placeholder="Type something..." />
-      <button onClick={focusInput}>Focus Input</button>
-    </div>
+    <StoreContext.Provider value={{ state, dispatch }}>
+      {children}
+    </StoreContext.Provider>
   );
 }
-```
 
-🧠 **Explanation:**
+// 4. Custom hook for clean access
+function useStore() {
+  return useContext(StoreContext);
+}
 
-* `useRef(null)` creates a reference object.
-* `ref={inputRef}` attaches it to the `<input>`.
-* Using `inputRef.current.focus()` directly accesses the DOM node.
+// 5. Wrap App
+<StoreProvider><App /></StoreProvider>
 
----
-
-### 📍 Example 2: Persistent Values (Without Re-rendering)
-
-```jsx
-import { useEffect, useRef, useState } from "react";
-
-function RenderCounter() {
-  const [count, setCount] = useState(0);
-  const renderCount = useRef(0);
-
-  useEffect(() => {
-    renderCount.current += 1;
-  });
-
-  return (
-    <div>
-      <h3>Count: {count}</h3>
-      <h4>Renders: {renderCount.current}</h4>
-      <button onClick={() => setCount(count + 1)}>Increase</button>
-    </div>
-  );
+// 6. Use anywhere
+function AnyComponent() {
+  const { state, dispatch } = useStore();
 }
 ```
 
-🧩 **Explanation:**
-
-* `renderCount.current` stores a mutable value.
-* It updates without triggering a re-render.
-* Each render increases the count persistently.
-
 ---
 
-### 📍 Example 3: Storing Previous State
+## 🔹 Example 1: Global Auth State
 
 ```jsx
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useReducer } from "react";
 
-function PreviousValue() {
-  const [count, setCount] = useState(0);
-  const prevCount = useRef();
+// --- Auth Reducer ---
+const initialAuthState = {
+  user: null,
+  isAuthenticated: false,
+  loading: false,
+  error: null,
+};
 
-  useEffect(() => {
-    prevCount.current = count;
-  }, [count]);
-
-  return (
-    <div>
-      <p>Current: {count}</p>
-      <p>Previous: {prevCount.current}</p>
-      <button onClick={() => setCount(count + 1)}>Increment</button>
-    </div>
-  );
-}
-```
-
-✅ This allows you to **track previous values** across renders.
-
----
-
-## 🔹 2. Custom Hooks — Creating Reusable Logic
-
-### 🧠 What are Custom Hooks?
-
-Custom Hooks are **functions that start with `use`** and allow you to **extract reusable logic** from components.
-
-> Think of them as “mini hooks” built using existing React Hooks (`useState`, `useEffect`, `useRef`, etc.).
-
----
-
-### 🧩 Benefits of Custom Hooks
-
-| Advantage           | Description                              |
-| ------------------- | ---------------------------------------- |
-| ♻️ Reusability      | Share logic between multiple components  |
-| 🧹 Clean Code       | Avoid duplication and clutter            |
-| 🔄 Easy Maintenance | Update logic once, apply everywhere      |
-| ⚡ Testability       | Easier to test business logic separately |
-
----
-
-### 📦 Example: Custom Hook for Window Width
-
-```jsx
-import { useState, useEffect } from "react";
-
-function useWindowWidth() {
-  const [width, setWidth] = useState(window.innerWidth);
-
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  return width;
+function authReducer(state, action) {
+  switch (action.type) {
+    case "LOGIN_START":
+      return { ...state, loading: true, error: null };
+    case "LOGIN_SUCCESS":
+      return { ...state, loading: false, isAuthenticated: true, user: action.payload };
+    case "LOGIN_ERROR":
+      return { ...state, loading: false, error: action.payload };
+    case "LOGOUT":
+      return initialAuthState;
+    case "UPDATE_PROFILE":
+      return { ...state, user: { ...state.user, ...action.payload } };
+    default:
+      return state;
+  }
 }
 
-export default useWindowWidth;
-```
+// --- Context & Provider ---
+const AuthContext = createContext(null);
 
-**Usage:**
+export function AuthProvider({ children }) {
+  const [state, dispatch] = useReducer(authReducer, initialAuthState);
 
-```jsx
-import useWindowWidth from "./useWindowWidth";
-
-function App() {
-  const width = useWindowWidth();
-  return <h3>Window Width: {width}px</h3>;
-}
-```
-
-🧠 **Logic:**
-This custom hook encapsulates the resize event listener logic and returns current width — reusable in multiple components.
-
----
-
-### 📦 Example: Custom Hook for Local Storage
-
-```jsx
-import { useState } from "react";
-
-function useLocalStorage(key, initialValue) {
-  const [value, setValue] = useState(() => {
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : initialValue;
-  });
-
-  const setStoredValue = (newValue) => {
-    setValue(newValue);
-    localStorage.setItem(key, JSON.stringify(newValue));
-  };
-
-  return [value, setStoredValue];
-}
-
-export default useLocalStorage;
-```
-
-**Usage:**
-
-```jsx
-const [theme, setTheme] = useLocalStorage("theme", "light");
-```
-
-✅ Reusable across multiple apps.
-
----
-
-## 🔹 3. Hook Best Practices & Common Patterns
-
-### 🧭 Rules of Hooks (Reminder)
-
-1. ✅ Only call hooks at the **top level** (not inside loops, conditions, or nested functions).
-2. ✅ Only call hooks from:
-
-   * React function components
-   * Custom Hooks
-3. ⚡ Hook names **must start with `use`** (like `useFetch`, `useTheme`).
-
----
-
-### 💡 Best Practices
-
-| Practice                   | Example                                                                |
-| -------------------------- | ---------------------------------------------------------------------- |
-| 📍 Keep hooks focused      | `useForm`, `useAuth`, `useFetch` — one responsibility per hook         |
-| 🔄 Return minimal API      | Return only what’s needed (state + function)                           |
-| 🧩 Reuse instead of repeat | Move duplicate `useEffect` or `useState` logic into a custom hook      |
-| 💬 Use meaningful names    | `useDebounce`, `useToggle`, `useFetchData` — clear intent              |
-| ⚠️ Always clean up         | Use return functions inside `useEffect` for listeners, intervals, etc. |
-
----
-
-### 🧱 Common Patterns
-
-#### 🔸 Pattern 1: useToggle Hook
-
-```jsx
-function useToggle(initial = false) {
-  const [state, setState] = useState(initial);
-  const toggle = () => setState((prev) => !prev);
-  return [state, toggle];
-}
-```
-
-Usage:
-
-```jsx
-const [isOpen, toggleOpen] = useToggle();
-```
-
----
-
-#### 🔸 Pattern 2: useDebounce Hook
-
-Used to delay a function call (like search API) until the user stops typing.
-
-```jsx
-import { useEffect, useState } from "react";
-
-function useDebounce(value, delay = 500) {
-  const [debounced, setDebounced] = useState(value);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-
-  return debounced;
-}
-
-export default useDebounce;
-```
-
----
-
-## 🔹 4. Hands-On: Search Filter Component with Debouncing (Custom Hook)
-
-Let’s build a **real-world component** that uses custom hooks.
-
----
-
-### ⚙️ Step 1: Create `useDebounce.js`
-
-```jsx
-import { useState, useEffect } from "react";
-
-function useDebounce(value, delay = 500) {
-  const [debounced, setDebounced] = useState(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebounced(value);
-    }, delay);
-
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-
-  return debounced;
-}
-
-export default useDebounce;
-```
-
----
-
-### ⚙️ Step 2: Create `SearchFilter.jsx`
-
-```jsx
-import React, { useEffect, useState } from "react";
-import useDebounce from "./useDebounce";
-
-const items = [
-  "React",
-  "Next.js",
-  "Node.js",
-  "MongoDB",
-  "TypeScript",
-  "Prisma",
-  "Express",
-];
-
-function SearchFilter() {
-  const [search, setSearch] = useState("");
-  const [filtered, setFiltered] = useState(items);
-  const debouncedSearch = useDebounce(search, 400);
-
-  useEffect(() => {
-    if (!debouncedSearch) {
-      setFiltered(items);
-    } else {
-      const result = items.filter((item) =>
-        item.toLowerCase().includes(debouncedSearch.toLowerCase())
-      );
-      setFiltered(result);
+  // Action creators — cleaner than raw dispatch calls
+  const login = async (email, password) => {
+    dispatch({ type: "LOGIN_START" });
+    try {
+      // Simulate API call
+      await new Promise((r) => setTimeout(r, 1000));
+      if (email === "admin@test.com" && password === "1234") {
+        dispatch({
+          type: "LOGIN_SUCCESS",
+          payload: { id: 1, name: "Ali Hassan", email, role: "admin" },
+        });
+      } else {
+        throw new Error("Invalid credentials");
+      }
+    } catch (err) {
+      dispatch({ type: "LOGIN_ERROR", payload: err.message });
     }
-  }, [debouncedSearch]);
+  };
+
+  const logout = () => dispatch({ type: "LOGOUT" });
 
   return (
-    <div style={{ textAlign: "center", marginTop: "30px" }}>
-      <h2>🔍 Debounced Search Filter</h2>
-      <input
-        type="text"
-        placeholder="Search technology..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{ padding: "8px", width: "250px" }}
-      />
-      <ul style={{ listStyle: "none", marginTop: "20px" }}>
-        {filtered.map((item, i) => (
-          <li key={i}>{item}</li>
-        ))}
-      </ul>
+    <AuthContext.Provider value={{ ...state, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// --- Custom Hook ---
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used inside AuthProvider");
+  return context;
+}
+```
+
+```jsx
+// --- Login Form ---
+function LoginForm() {
+  const { login, loading, error } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    login(email, password);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ maxWidth: 360, margin: "40px auto", padding: 24, border: "1px solid #ddd", borderRadius: 8 }}>
+      <h2>Login</h2>
+      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={{ display: "block", width: "100%", padding: 8, marginBottom: 8 }} />
+      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" style={{ display: "block", width: "100%", padding: 8, marginBottom: 8 }} />
+      {error && <p style={{ color: "red" }}>❌ {error}</p>}
+      <button type="submit" disabled={loading} style={{ width: "100%", padding: 10 }}>
+        {loading ? "Logging in..." : "Login"}
+      </button>
+      <p style={{ fontSize: 12, color: "#999" }}>Use: admin@test.com / 1234</p>
+    </form>
+  );
+}
+
+// --- Dashboard ---
+function Dashboard() {
+  const { user, logout } = useAuth();
+  return (
+    <div style={{ padding: 24 }}>
+      <h2>Welcome, {user.name}!</h2>
+      <p>Email: {user.email} | Role: {user.role}</p>
+      <button onClick={logout}>Logout</button>
     </div>
   );
 }
 
-export default SearchFilter;
+// --- App ---
+function App() {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <Dashboard /> : <LoginForm />;
+}
+
+// --- Root ---
+export default function Root() {
+  return (
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  );
+}
 ```
 
 ---
 
-### 🧠 How It Works
+## 🔹 Example 2: Global Cart State
 
-1. User types → `search` updates instantly.
-2. `useDebounce` waits 400ms before updating `debouncedSearch`.
-3. If the user keeps typing → timer resets.
-4. When typing stops → the search filter executes only once.
-   ✅ Prevents unnecessary re-renders and API calls.
+```jsx
+import { createContext, useContext, useReducer, useMemo } from "react";
+
+function cartReducer(state, action) {
+  switch (action.type) {
+    case "ADD": {
+      const exists = state.find((i) => i.id === action.payload.id);
+      return exists
+        ? state.map((i) => i.id === action.payload.id ? { ...i, qty: i.qty + 1 } : i)
+        : [...state, { ...action.payload, qty: 1 }];
+    }
+    case "REMOVE":
+      return state.filter((i) => i.id !== action.payload);
+    case "UPDATE_QTY":
+      return state
+        .map((i) => i.id === action.payload.id ? { ...i, qty: action.payload.qty } : i)
+        .filter((i) => i.qty > 0);
+    case "CLEAR":
+      return [];
+    default:
+      return state;
+  }
+}
+
+const CartContext = createContext(null);
+
+export function CartProvider({ children }) {
+  const [items, dispatch] = useReducer(cartReducer, []);
+
+  const total = useMemo(
+    () => items.reduce((sum, i) => sum + i.price * i.qty, 0),
+    [items]
+  );
+
+  const itemCount = items.reduce((sum, i) => sum + i.qty, 0);
+
+  return (
+    <CartContext.Provider value={{ items, total, itemCount, dispatch }}>
+      {children}
+    </CartContext.Provider>
+  );
+}
+
+export function useCart() {
+  return useContext(CartContext);
+}
+```
+
+```jsx
+// Navbar — shows cart count from anywhere
+function Navbar() {
+  const { itemCount } = useCart();
+  return (
+    <nav style={{ background: "#1a1a2e", padding: "12px 24px", color: "#fff", display: "flex", justifyContent: "space-between" }}>
+      <span>🛍️ My Shop</span>
+      <span>🛒 {itemCount}</span>
+    </nav>
+  );
+}
+
+// Product Card — adds to cart
+function ProductCard({ product }) {
+  const { dispatch } = useCart();
+  return (
+    <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16 }}>
+      <h3>{product.name}</h3>
+      <p>${product.price}</p>
+      <button onClick={() => dispatch({ type: "ADD", payload: product })}>
+        Add to Cart
+      </button>
+    </div>
+  );
+}
+
+// Cart Page — reads and manages cart
+function CartPage() {
+  const { items, total, dispatch } = useCart();
+  return (
+    <div>
+      {items.map((item) => (
+        <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: 8 }}>
+          <span>{item.name} x{item.qty}</span>
+          <button onClick={() => dispatch({ type: "REMOVE", payload: item.id })}>Remove</button>
+        </div>
+      ))}
+      <strong>Total: ${total}</strong>
+    </div>
+  );
+}
+```
 
 ---
 
-### ⚡ Advantages
+## 🔹 useReducer + Context vs Redux
 
-* Better **performance** (fewer renders)
-* **Reusable hook** for any input-based API
-* Cleaner code separation (`useDebounce` handles delay logic)
+```mermaid
+graph LR
+    A{App Size?} --> B[Small to Medium]
+    A --> C[Large / Complex]
+    B --> D[useReducer + Context ✅]
+    C --> E[Redux Toolkit ✅]
+    D --> F[No extra deps\nBuilt-in React\nSimpler setup]
+    E --> G[DevTools\nMiddleware\nRTK Query\nBetter perf]
+```
 
----
-
-## 🧾 Final Summary
-
-| Concept           | Purpose                                | Example Use                                  |
-| ----------------- | -------------------------------------- | -------------------------------------------- |
-| **`useRef`**      | Access DOM, store mutable values       | Focus input, store previous value            |
-| **Custom Hook**   | Reusable logic for multiple components | `useFetch`, `useDebounce`, `useLocalStorage` |
-| **Hook Patterns** | Standard solutions to common problems  | `useToggle`, `useForm`, `useAuth`            |
-| **Debouncing**    | Optimize input events                  | Search filter, API queries                   |
-
----
-
-### 🏁 Key Takeaways
-
-* `useRef` = For **DOM access** or **mutable persistent data**.
-* Custom Hooks = For **logic reusability** and **clean code**.
-* Follow **Rules of Hooks** strictly.
-* Use **debouncing** to make input handling efficient.
-* Keep Hooks **simple, reusable, and testable**.
+| | useReducer + Context | Redux Toolkit |
+|--|---------------------|---------------|
+| Setup | Zero config | `npm install @reduxjs/redux-toolkit react-redux` |
+| DevTools | ❌ No | ✅ Excellent |
+| Middleware | ❌ Manual | ✅ Built-in (Thunk) |
+| Performance | ⚠️ All consumers re-render | ✅ Selector-based optimization |
+| Learning curve | Low | Medium |
+| Best for | Small/medium apps | Large apps |
 
 ---
 
 ## 🎯 Interview Questions
 
-**Q1: What is `useRef` and how is it different from `useState`?**
+**Q1: Why combine `useReducer` with Context instead of just Context with `useState`?**
 
-> Both store values, but `useRef` does **not trigger a re-render** when its `.current` value changes. Use `useRef` for DOM access or mutable values that don't need to affect the UI (like timers, previous values, focus management).
+> For complex state with many transitions, `useReducer` keeps the logic organized in one place (the reducer). With `useState` you'd have multiple setters spread across the provider. `useReducer` + Context gives you a predictable, centralized state machine.
 
-**Q2: When would you use `useRef` instead of `useState`?**
+**Q2: What is the difference between this pattern and Redux?**
 
-> When you need: 1) Direct DOM access (focusing an input, measuring size). 2) Storing the previous value of state. 3) Mutable variables like interval IDs or subscription objects that shouldn't cause re-renders.
+> Functionally similar — both have a store, reducer, and dispatch. Key differences: Redux has DevTools, middleware support, and selector-based re-render optimization. The `useReducer` + Context pattern is simpler with no dependencies but doesn't scale as well for very large apps.
 
-**Q3: What is a custom hook?**
+**Q3: What is an "action creator" and why use it?**
 
-> A custom hook is a regular JavaScript function whose name starts with `use` and calls other hooks inside. It allows you to extract and reuse stateful logic across components — like `useFetch`, `useDebounce`, `useLocalStorage`.
+> A function that creates and dispatches actions: `const login = (email) => dispatch({ type: "LOGIN", payload: email })`. It hides the action structure from components and makes it easier to refactor.
 
-**Q4: What is debouncing and why is it useful?**
+**Q4: Does every component re-render when dispatch is called?**
 
-> Debouncing delays executing a function until after a specified wait time has elapsed since the last call. Useful for search inputs — without it, every keystroke fires an API call. With debouncing, the call only happens after the user stops typing.
-
-**Q5: Can a custom hook maintain its own state?**
-
-> Yes. Each component that calls a custom hook gets its own independent state. The hook logic is shared, but the state is not — it's separate per component instance.
+> Every component that consumes the context via `useContext` will re-render when the context value changes. To optimize, split contexts (auth context separate from cart context) so updates to one don't affect consumers of the other.
 
 ---
 
 ## 🏠 Home Task
 
-Build a **Smart Search App** using custom hooks:
-1. `useDebounce(value, delay)` — debounce any value
-2. `useLocalStorage(key, defaultValue)` — persist state to localStorage
-3. `useFetch(url)` — returns `{ data, loading, error }` — reusable fetch hook
-4. A search input that uses `useDebounce` (500ms) before calling an API
-5. Search history stored in `localStorage` using `useLocalStorage`
-6. Previous search results shown while new ones load (using `useRef` to store previous data)
-7. Bonus: `useWindowWidth` hook — show "Mobile" / "Tablet" / "Desktop" based on screen width
+Build a **Global Theme + User Settings App**:
+1. `SettingsContext` using `useReducer`
+2. State: `{ theme: "light", language: "en", fontSize: "md", notifications: true }`
+3. Actions: `SET_THEME`, `SET_LANGUAGE`, `SET_FONT_SIZE`, `TOGGLE_NOTIFICATIONS`, `RESET_SETTINGS`
+4. Settings panel component — reads and updates all settings
+5. Navbar that changes background based on theme
+6. Content area font changes based on `fontSize`
+7. Persist settings to `localStorage` — restore on page reload

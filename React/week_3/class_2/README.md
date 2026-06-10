@@ -11,6 +11,7 @@
 - `children` prop
 - Prop spreading
 - Prop drilling problem and Context API as solution
+- `PropTypes` — runtime type checking
 
 ---
 
@@ -641,6 +642,97 @@ function GrandChild({ userName }) {
 
 ---
 
+---
+
+## 🔍 **PropTypes — Runtime Type Checking**
+
+PropTypes provide **runtime warnings** in development when a component receives wrong prop types.
+
+```bash
+npm install prop-types
+```
+
+```jsx
+import PropTypes from "prop-types";
+```
+
+### ✅ Basic Example
+
+```jsx
+import PropTypes from "prop-types";
+
+function UserCard({ name, age, isAdmin, scores, address, onDelete }) {
+  return (
+    <div>
+      <h2>{name}</h2>
+      <p>Age: {age}</p>
+      <p>Admin: {isAdmin ? "Yes" : "No"}</p>
+      <p>Scores: {scores.join(", ")}</p>
+      <p>City: {address.city}</p>
+      <button onClick={onDelete}>Delete</button>
+    </div>
+  );
+}
+
+UserCard.propTypes = {
+  name: PropTypes.string.isRequired,
+  age: PropTypes.number.isRequired,
+  isAdmin: PropTypes.bool,
+  scores: PropTypes.arrayOf(PropTypes.number),
+  address: PropTypes.shape({
+    city: PropTypes.string,
+    country: PropTypes.string,
+  }),
+  onDelete: PropTypes.func,
+};
+
+UserCard.defaultProps = {
+  isAdmin: false,
+  scores: [],
+  address: { city: "Unknown", country: "Unknown" },
+  onDelete: () => {},
+};
+```
+
+🧠 **Explanation:**
+- `PropTypes.string.isRequired` → prop must be a string and is required.
+- `PropTypes.arrayOf(PropTypes.number)` → array of numbers.
+- `PropTypes.shape({})` → object with a specific structure.
+- `.isRequired` → warn if the prop is not provided.
+
+---
+
+### 📋 **All Common PropTypes Rules**
+
+| Rule | Description |
+| ---- | ----------- |
+| `PropTypes.string` | String value |
+| `PropTypes.number` | Number value |
+| `PropTypes.bool` | Boolean value |
+| `PropTypes.func` | Function |
+| `PropTypes.array` | Any array |
+| `PropTypes.object` | Any object |
+| `PropTypes.arrayOf(type)` | Array of a specific type |
+| `PropTypes.shape({})` | Object with specific keys/types |
+| `PropTypes.oneOf([...])` | One of a set of specific values |
+| `PropTypes.node` | Anything renderable (string, number, JSX) |
+| `PropTypes.element` | A React element |
+| `.isRequired` | Makes the prop mandatory |
+
+```jsx
+Button.propTypes = {
+  label: PropTypes.string.isRequired,
+  variant: PropTypes.oneOf(["primary", "secondary", "danger"]),
+  onClick: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
+  children: PropTypes.node,
+};
+```
+
+> **Note:** PropTypes only run in development mode. They are automatically stripped from production builds.
+
+---
+
 ## 🏠 Home Task
 
 Build a **Reusable Card System**:
@@ -650,3 +742,4 @@ Build a **Reusable Card System**:
 4. Parent `App.jsx` renders a list of 5 UserCards and 5 ProductCards by mapping over arrays
 5. Pass a `onDelete` callback from App to each card — clicking "Remove" calls it with the item's id
 6. Demonstrate state lifting: clicking a card selects it, selected card shows a different border color
+7. Add `PropTypes` validation to all three components (`UserCard`, `ProductCard`, `Badge`)

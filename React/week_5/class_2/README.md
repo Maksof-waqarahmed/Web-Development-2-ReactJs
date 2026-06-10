@@ -1,418 +1,447 @@
-# 🌐 React Context API — Global State Without Prop Drilling
+# ⚛️ React Hooks Deep Dive — `useRef` & Custom Hooks
 
 ## 📚 Topics Covered
-- Prop drilling problem — why it's painful
-- Context API as the solution
-- `createContext`, `Provider`, `useContext` — the three building blocks
-- User data context example
-- Theme context (light/dark mode)
-- Auth context (login/logout state)
-- Multiple contexts — nesting providers
-- Combined provider pattern for cleaner code
+- `useRef` hook — DOM access and persistent values
+- Storing previous state with `useRef`
+- Creating custom hooks — what, why, and how
+- `useLocalStorage` custom hook
+- `useWindowWidth` custom hook
+- `useToggle` and `useDebounce` patterns
+- Debouncing explained with search filter example
+- Hook best practices and rules
 
 ---
 
-## **1️⃣ What is Prop Drilling?**
+## `useRef`, Custom Hooks, Best Practices, and Debouncing Example
 
-In React, data is usually passed **parent → child** using **props**.
-But when components are **deeply nested**, props need to be passed at every level.
+---
 
-👉 This problem is called **Prop Drilling**.
+## 🔹 1. `useRef` Hook — DOM Access & Persistent Values
 
-### **Example of Prop Drilling:**
+### 🧠 What is `useRef`?
+
+`useRef` is a that gives you a **mutable reference** to store values that **persist between re-renders** — **without causing a re-render**.
+
+It can be used for:
+
+* Accessing and interacting with **DOM elements**
+* Storing **previous values**
+* Maintaining **mutable variables** that don’t trigger re-rendering
+
+---
+
+### 🧩 Syntax
 
 ```jsx
-function App() {
-  const user = "Rana";
+const refName = useRef(initialValue);
+```
 
-  return <Parent user={user} />;
-}
+* `refName.current` → stores the current value.
+* The value **does not reset** across re-renders.
 
-function Parent({ user }) {
-  return <Child user={user} />;
-}
+---
 
-function Child({ user }) {
-  return <GrandChild user={user} />;
-}
+### 📍 Example 1: Accessing DOM Elements
 
-function GrandChild({ user }) {
-  return <h2>Hello {user}</h2>;
+```jsx
+import { useRef } from "react";
+
+function FocusInput() {
+  const inputRef = useRef(null);
+
+  const focusInput = () => {
+    inputRef.current.focus(); // direct DOM access
+  };
+
+  return (
+    <div>
+      <input ref={inputRef} placeholder="Type something..." />
+      <button onClick={focusInput}>Focus Input</button>
+    </div>
+  );
 }
 ```
 
-⚠️ Here `user` is being passed down at every level → messy & hard to maintain.
+🧠 **Explanation:**
+
+* `useRef(null)` creates a reference object.
+* `ref={inputRef}` attaches it to the `<input>`.
+* Using `inputRef.current.focus()` directly accesses the DOM node.
 
 ---
 
-## **2️⃣ Solution: Context API**
-
-React **Context API** allows you to:
-
-* Create a **global state** accessible to all components.
-* No need to pass props manually at every level.
-* Useful for managing themes, authentication, language, user info, etc.
-
----
-
-## **3️⃣ Core Building Blocks**
-
-### 🔹 `createContext`
-
-* Creates a **Context object**.
-* Example: `const ThemeContext = createContext();`
-
-### 🔹 `Provider`
-
-* A component that **provides values** (data, functions) to children.
-* Example:
+### 📍 Example 2: Persistent Values (Without Re-rendering)
 
 ```jsx
-<ThemeContext.Provider value={theme}>
-  <App />
-</ThemeContext.Provider>
-```
+import { useEffect, useRef, useState } from "react";
 
-### 🔹 `useContext`
+function RenderCounter() {
+  const [count, setCount] = useState(0);
+  const renderCount = useRef(0);
 
-* A hook used by child components to **consume values** from Context.
-* Example:
-
-```jsx
-const theme = useContext(ThemeContext);
-```
-
----
-
-## **4️⃣ Context API Example (User Data Context)**
-
-```jsx
-// UserData.js
-import { createContext, useState } from "react";
-
-// 1. Create Context
-export const UserContext = createContext();
-
-// 2. Provider Component
-export function UserDataProvider({ children }) {
-  const [user, setUser] = useState({
-    name: "Waqar Rana",
-    contact: "0318",
-    location: "Karachi",
-    email: "waqar@gmail.com"
+  useEffect(() => {
+    renderCount.current += 1;
   });
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
-      {children}
-    </UserContext.Provider>
+    <div>
+      <h3>Count: {count}</h3>
+      <h4>Renders: {renderCount.current}</h4>
+      <button onClick={() => setCount(count + 1)}>Increase</button>
+    </div>
   );
 }
 ```
 
-```jsx
-// App.jsx
-import { UserDataProvider } from "./UserData";
-import Home from "./Home";
+🧩 **Explanation:**
 
-export default function App() {
-  return (
-    <UserDataProvider>
-      <Home />
-    </UserDataProvider>
-  );
-}
-```
+* `renderCount.current` stores a mutable value.
+* It updates without triggering a re-render.
+* Each render increases the count persistently.
+
+---
+
+### 📍 Example 3: Storing Previous State
 
 ```jsx
-// Home.jsx
-import { useContext } from "react";
-import { UserContext } from "./UserData";
+import { useEffect, useRef, useState } from "react";
 
-export default function Home() {
-  const { user } = useContext(UserContext);
+function PreviousValue() {
+  const [count, setCount] = useState(0);
+  const prevCount = useRef();
+
+  useEffect(() => {
+    prevCount.current = count;
+  }, [count]);
 
   return (
     <div>
-      <h1>{user.name.toUpperCase()}</h1>
-      <h2>{user.email.toUpperCase()}</h2>
+      <p>Current: {count}</p>
+      <p>Previous: {prevCount.current}</p>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
     </div>
   );
 }
 ```
 
-## 🔹 Why we wrap with `<UserDataProvider>`
-
-When you use **Context API**, the `Provider` defines **which part of the app tree** will have access to that context.
-
-```jsx
-<UserDataProvider>
-  <Home />
-</UserDataProvider>
-```
-
-This means:
-
-* Everything **inside** `<UserDataProvider>` (like `<Home />`) can access the `userData` context.
-* Anything **outside** of it cannot use that context.
-
-So we wrap `<Home />` (or sometimes the **entire app**) with the provider to make sure all child components can consume the context.
+✅ This allows you to **track previous values** across renders.
 
 ---
 
-## **5️⃣ Another Example: Theme Context (Light/Dark Mode)**
+## 🔹 2. Custom Hooks — Creating Reusable Logic
 
-👉 Manage **Light/Dark Theme** globally using Context.
+### 🧠 What are Custom Hooks?
+
+Custom Hooks are **functions that start with `use`** and allow you to **extract reusable logic** from components.
+
+> Think of them as “mini hooks” built using existing React Hooks (`useState`, `useEffect`, `useRef`, etc.).
+
+---
+
+### 🧩 Benefits of Custom Hooks
+
+| Advantage           | Description                              |
+| ------------------- | ---------------------------------------- |
+| ♻️ Reusability      | Share logic between multiple components  |
+| 🧹 Clean Code       | Avoid duplication and clutter            |
+| 🔄 Easy Maintenance | Update logic once, apply everywhere      |
+| ⚡ Testability       | Easier to test business logic separately |
+
+---
+
+### 📦 Example: Custom Hook for Window Width
 
 ```jsx
-// ThemeContext.js
-import { createContext, useState } from "react";
+import { useState, useEffect } from "react";
 
-// 1. Create Context
-export const ThemeContext = createContext();
+function useWindowWidth() {
+  const [width, setWidth] = useState(window.innerWidth);
 
-// 2. Provider Component
-export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState("light");
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return width;
+}
+
+export default useWindowWidth;
+```
+
+**Usage:**
+
+```jsx
+import useWindowWidth from "./useWindowWidth";
+
+function App() {
+  const width = useWindowWidth();
+  return <h3>Window Width: {width}px</h3>;
+}
+```
+
+🧠 **Logic:**
+This custom hook encapsulates the resize event listener logic and returns current width — reusable in multiple components.
+
+---
+
+### 📦 Example: Custom Hook for Local Storage
+
+```jsx
+import { useState } from "react";
+
+function useLocalStorage(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : initialValue;
+  });
+
+  const setStoredValue = (newValue) => {
+    setValue(newValue);
+    localStorage.setItem(key, JSON.stringify(newValue));
   };
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return [value, setStoredValue];
+}
+
+export default useLocalStorage;
+```
+
+**Usage:**
+
+```jsx
+const [theme, setTheme] = useLocalStorage("theme", "light");
+```
+
+✅ Reusable across multiple apps.
+
+---
+
+## 🔹 3. Hook Best Practices & Common Patterns
+
+### 🧭 Rules of Hooks (Reminder)
+
+1. ✅ Only call hooks at the **top level** (not inside loops, conditions, or nested functions).
+2. ✅ Only call hooks from:
+
+   * React function components
+   * Custom Hooks
+3. ⚡ Hook names **must start with `use`** (like `useFetch`, `useTheme`).
+
+---
+
+### 💡 Best Practices
+
+| Practice                   | Example                                                                |
+| -------------------------- | ---------------------------------------------------------------------- |
+| 📍 Keep hooks focused      | `useForm`, `useAuth`, `useFetch` — one responsibility per hook         |
+| 🔄 Return minimal API      | Return only what’s needed (state + function)                           |
+| 🧩 Reuse instead of repeat | Move duplicate `useEffect` or `useState` logic into a custom hook      |
+| 💬 Use meaningful names    | `useDebounce`, `useToggle`, `useFetchData` — clear intent              |
+| ⚠️ Always clean up         | Use return functions inside `useEffect` for listeners, intervals, etc. |
+
+---
+
+### 🧱 Common Patterns
+
+#### 🔸 Pattern 1: useToggle Hook
+
+```jsx
+function useToggle(initial = false) {
+  const [state, setState] = useState(initial);
+  const toggle = () => setState((prev) => !prev);
+  return [state, toggle];
 }
 ```
 
-```jsx
-// App.jsx
-import { ThemeProvider } from "./ThemeContext";
-import ThemeSwitcher from "./ThemeSwitcher";
+Usage:
 
-export default function App() {
-  return (
-    <ThemeProvider>
-      <ThemeSwitcher />
-    </ThemeProvider>
-  );
-}
+```jsx
+const [isOpen, toggleOpen] = useToggle();
 ```
 
+---
+
+#### 🔸 Pattern 2: useDebounce Hook
+
+Used to delay a function call (like search API) until the user stops typing.
+
 ```jsx
-// ThemeSwitcher.jsx
-import { useContext } from "react";
-import { ThemeContext } from "./ThemeContext";
+import { useEffect, useState } from "react";
 
-export default function ThemeSwitcher() {
-  const { theme, toggleTheme } = useContext(ThemeContext);
+function useDebounce(value, delay = 500) {
+  const [debounced, setDebounced] = useState(value);
 
-  const styles = {
-    backgroundColor: theme === "light" ? "#fff" : "#333",
-    color: theme === "light" ? "#000" : "#fff",
-    padding: "20px",
-    textAlign: "center"
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
+}
+
+export default useDebounce;
+```
+
+---
+
+## 🔹 4. Hands-On: Search Filter Component with Debouncing (Custom Hook)
+
+Let’s build a **real-world component** that uses custom hooks.
+
+---
+
+### ⚙️ Step 1: Create `useDebounce.js`
+
+```jsx
+import { useState, useEffect } from "react";
+
+function useDebounce(value, delay = 500) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebounced(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debounced;
+}
+
+export default useDebounce;
+```
+
+---
+
+### ⚙️ Step 2: Create `SearchFilter.jsx`
+
+```jsx
+import React, { useEffect, useState } from "react";
+import useDebounce from "./useDebounce";
+
+const items = [
+  "React",
+  "Next.js",
+  "Node.js",
+  "MongoDB",
+  "TypeScript",
+  "Prisma",
+  "Express",
+];
+
+function SearchFilter() {
+  const [search, setSearch] = useState("");
+  const [filtered, setFiltered] = useState(items);
+  const debouncedSearch = useDebounce(search, 400);
+
+  useEffect(() => {
+    if (!debouncedSearch) {
+      setFiltered(items);
+    } else {
+      const result = items.filter((item) =>
+        item.toLowerCase().includes(debouncedSearch.toLowerCase())
+      );
+      setFiltered(result);
+    }
+  }, [debouncedSearch]);
 
   return (
-    <div style={styles}>
-      <h1>{theme.toUpperCase()} MODE</h1>
-      <button onClick={toggleTheme}>Toggle Theme</button>
+    <div style={{ textAlign: "center", marginTop: "30px" }}>
+      <h2>🔍 Debounced Search Filter</h2>
+      <input
+        type="text"
+        placeholder="Search technology..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{ padding: "8px", width: "250px" }}
+      />
+      <ul style={{ listStyle: "none", marginTop: "20px" }}>
+        {filtered.map((item, i) => (
+          <li key={i}>{item}</li>
+        ))}
+      </ul>
     </div>
   );
 }
+
+export default SearchFilter;
 ```
 
 ---
 
-## **6️⃣ Another Example: Auth Context**
+### 🧠 How It Works
 
-👉 Manage global login state.
-
-```jsx
-// AuthContext.js
-import { createContext, useState } from "react";
-
-export const AuthContext = createContext();
-
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-
-  const login = (name) => setUser({ name });
-  const logout = () => setUser(null);
-
-  return (
-    <AuthContext.Provider value={{ user, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-```
-
-```jsx
-// App.jsx
-import { AuthProvider } from "./AuthContext";
-import Profile from "./Profile";
-
-export default function App() {
-  return (
-    <AuthProvider>
-      <Profile />
-    </AuthProvider>
-  );
-}
-```
-
-```jsx
-// Profile.jsx
-import { useContext } from "react";
-import { AuthContext } from "./AuthContext";
-
-export default function Profile() {
-  const { user, login, logout } = useContext(AuthContext);
-
-  return (
-    <div>
-      {user ? (
-        <>
-          <h2>Welcome {user.name}</h2>
-          <button onClick={logout}>Logout</button>
-        </>
-      ) : (
-        <button onClick={() => login("Rana")}>Login</button>
-      )}
-    </div>
-  );
-}
-```
+1. User types → `search` updates instantly.
+2. `useDebounce` waits 400ms before updating `debouncedSearch`.
+3. If the user keeps typing → timer resets.
+4. When typing stops → the search filter executes only once.
+   ✅ Prevents unnecessary re-renders and API calls.
 
 ---
 
-## **📌 Summary**
+### ⚡ Advantages
 
-* **Prop Drilling Problem** → Context API solves it.
-* Use `createContext`, `Provider`, and `useContext`.
-* Examples:
-
-  * User Data Context
-  * Theme Context (Light/Dark)
-  * Auth Context
-
-👉 Best for global states like authentication, theme, language, or cart in an e-commerce app.
+* Better **performance** (fewer renders)
+* **Reusable hook** for any input-based API
+* Cleaner code separation (`useDebounce` handles delay logic)
 
 ---
 
-## 🔹 What if we have **multiple contexts**?
+## 🧾 Final Summary
 
-Sometimes you’ll have more than one global state (e.g., `UserContext`, `ThemeContext`, `AuthContext`).
-In that case, you need to **nest providers**.
-
-### Example:
-
-```jsx
-import { UserDataProvider } from "./UserData";
-import { ThemeProvider } from "./ThemeContext";
-import { AuthProvider } from "./AuthContext";
-import Home from "./Home";
-
-export default function App() {
-  return (
-    <AuthProvider>
-      <UserDataProvider>
-        <ThemeProvider>
-          <Home />
-        </ThemeProvider>
-      </UserDataProvider>
-    </AuthProvider>
-  );
-}
-```
-
-Here:
-
-* `AuthProvider` gives access to authentication state.
-* `UserDataProvider` gives access to user info.
-* `ThemeProvider` gives access to light/dark mode.
-
-⚡ All three are available inside `<Home />`.
+| Concept           | Purpose                                | Example Use                                  |
+| ----------------- | -------------------------------------- | -------------------------------------------- |
+| **`useRef`**      | Access DOM, store mutable values       | Focus input, store previous value            |
+| **Custom Hook**   | Reusable logic for multiple components | `useFetch`, `useDebounce`, `useLocalStorage` |
+| **Hook Patterns** | Standard solutions to common problems  | `useToggle`, `useForm`, `useAuth`            |
+| **Debouncing**    | Optimize input events                  | Search filter, API queries                   |
 
 ---
 
-## 🔹 Cleaner way for multiple contexts
+### 🏁 Key Takeaways
 
-Nesting too many providers looks ugly. So we can create a **combined provider**:
-
-```jsx
-// AppProviders.jsx
-import { AuthProvider } from "./AuthContext";
-import { UserDataProvider } from "./UserData";
-import { ThemeProvider } from "./ThemeContext";
-
-export function AppProviders({ children }) {
-  return (
-    <AuthProvider>
-      <UserDataProvider>
-        <ThemeProvider>{children}</ThemeProvider>
-      </UserDataProvider>
-    </AuthProvider>
-  );
-}
-```
-
-Then in `App.jsx`:
-
-```jsx
-import { AppProviders } from "./AppProviders";
-import Home from "./Home";
-
-export default function App() {
-  return (
-    <AppProviders>
-      <Home />
-    </AppProviders>
-  );
-}
-```
-
-👉 Now it’s **cleaner** and still works the same.
+* `useRef` = For **DOM access** or **mutable persistent data**.
+* Custom Hooks = For **logic reusability** and **clean code**.
+* Follow **Rules of Hooks** strictly.
+* Use **debouncing** to make input handling efficient.
+* Keep Hooks **simple, reusable, and testable**.
 
 ---
 
 ## 🎯 Interview Questions
 
-**Q1: What problem does the Context API solve?**
+**Q1: What is `useRef` and how is it different from `useState`?**
 
-> Prop drilling — passing data through many intermediate components that don’t need it. Context provides a way to share data globally within a component tree without explicitly passing props at every level.
+> Both store values, but `useRef` does **not trigger a re-render** when its `.current` value changes. Use `useRef` for DOM access or mutable values that don't need to affect the UI (like timers, previous values, focus management).
 
-**Q2: What are the three main pieces of Context API?**
+**Q2: When would you use `useRef` instead of `useState`?**
 
-> 1. `createContext()` — creates the context object. 2. `Provider` — wraps the component tree and provides the value. 3. `useContext(MyContext)` — consumes the value in any descendant component.
+> When you need: 1) Direct DOM access (focusing an input, measuring size). 2) Storing the previous value of state. 3) Mutable variables like interval IDs or subscription objects that shouldn't cause re-renders.
 
-**Q3: Does every component re-render when a Context value changes?**
+**Q3: What is a custom hook?**
 
-> Yes — every component that calls `useContext(MyContext)` will re-render when the context value changes, even if the specific part of the value they use didn’t change. This is why large apps use multiple focused contexts or state management libraries like Redux/Zustand.
+> A custom hook is a regular JavaScript function whose name starts with `use` and calls other hooks inside. It allows you to extract and reuse stateful logic across components — like `useFetch`, `useDebounce`, `useLocalStorage`.
 
-**Q4: When should you use Context API vs props?**
+**Q4: What is debouncing and why is it useful?**
 
-> Use props for data that’s specific to a parent-child relationship. Use Context for genuinely global data shared across many components: current user, theme, language, authentication state.
+> Debouncing delays executing a function until after a specified wait time has elapsed since the last call. Useful for search inputs — without it, every keystroke fires an API call. With debouncing, the call only happens after the user stops typing.
 
-**Q5: Can you have multiple contexts in one app?**
+**Q5: Can a custom hook maintain its own state?**
 
-> Yes. Each context has its own Provider and value. Nesting providers lets different contexts coexist. A common pattern is a single `AppProviders` component that nests all providers.
+> Yes. Each component that calls a custom hook gets its own independent state. The hook logic is shared, but the state is not — it's separate per component instance.
 
 ---
 
 ## 🏠 Home Task
 
-Build a **Theme + Auth App** using Context API:
-1. `ThemeContext` — light/dark mode, toggle button accessible from anywhere
-2. `AuthContext` — `user` object, `login(name)`, `logout()` functions
-3. `CartContext` — `items`, `addItem(product)`, `removeItem(id)`, `total` computed value
-4. `Navbar` uses all three contexts: shows username, theme toggle, cart count
-5. `ProductPage` — add to cart button (uses CartContext)
-6. `ProfilePage` — shows user info, logout button (uses AuthContext)
-7. All providers combined in `AppProviders.jsx`
-
-
+Build a **Smart Search App** using custom hooks:
+1. `useDebounce(value, delay)` — debounce any value
+2. `useLocalStorage(key, defaultValue)` — persist state to localStorage
+3. `useFetch(url)` — returns `{ data, loading, error }` — reusable fetch hook
+4. A search input that uses `useDebounce` (500ms) before calling an API
+5. Search history stored in `localStorage` using `useLocalStorage`
+6. Previous search results shown while new ones load (using `useRef` to store previous data)
+7. Bonus: `useWindowWidth` hook — show "Mobile" / "Tablet" / "Desktop" based on screen width

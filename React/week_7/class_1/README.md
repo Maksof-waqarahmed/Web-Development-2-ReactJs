@@ -1,540 +1,166 @@
-# 📁 React File Uploads & Preview
+# 🧠 Quiz App — React Project
 
 ## 📚 Topics Covered
-- `<input type="file" />` handling in React
-- Single and multiple file selection
-- File preview using `URL.createObjectURL()`
-- Cleaning up object URLs to avoid memory leaks
-- Removing selected files from preview
-- File type and size validation
-- Uploading files to a server using `FormData`
-- Project: My Photo Album (upload, preview, gallery, remove)
+- Fetching quiz questions from a public API
+- Managing question index with `useState`
+- Handling option selection and validation
+- Calculating and displaying score
+- Conditional rendering for results screen
+- `Options` component with props
+- Preventing question skipping
+- Shuffling answer options
+- Project: Full Quiz App with score and feedback
 
 ---
-
-React allows you to handle **file uploads** natively using the `<input type="file" />` element. You can also show a **preview** before uploading.
-
----
-
-## 🧠 1. Basic Concept
-
-1. **File input**: `<input type="file" />` lets users select files from their system.
-2. **File object**: Browsers return selected files as **File objects**.
-3. **State management**: Use `useState` to store selected files.
-4. **Preview**: Use `URL.createObjectURL(file)` to display the file.
-
----
-
-## 🔹 2. Handling File Input in React
 
 ```jsx
-import React, { useState } from "react";
+import { useState } from "react";
+import { Options } from "./options";
 
-function FileUpload() {
-  const [file, setFile] = useState(null);
+export function QuizApp() {
+  const [mcqs, setMcqs] = useState([]);
+  const [quizStarted, setQuizStarted] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [answer, setAnswer] = useState("");
+  const [showResult, setShowResult] = useState(false);
 
-  const handleChange = (e) => {
-    setFile(e.target.files[0]); // Store the selected file in state
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Selected File:", file);
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input type="file" onChange={handleChange} />
-      <button type="submit">Upload</button>
-    </form>
-  );
-}
-
-export default FileUpload;
-```
-
-✅ **Explanation**:
-
-* `e.target.files` returns an array of selected files.
-* `files[0]` is used because usually one file is selected.
-* The file is stored in `useState` for further processing (upload or preview).
-
----
-
-## 🔹 3. File Preview
-
-### 📌 Preview Images
-
-```jsx
-import React, { useState } from "react";
-
-function FilePreview() {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-
-  const handleChange = (e) => {
-    const selectedFile = e.target.files[0];
-    setFile(selectedFile);
-
-    // Generate preview URL
-    if (selectedFile) {
-      const previewUrl = URL.createObjectURL(selectedFile);
-      setPreview(previewUrl);
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("File Submitted:", file);
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input type="file" onChange={handleChange} />
-      {preview && (
-        <div>
-          <h4>Preview:</h4>
-          <img
-            src={preview}
-            alt="Preview"
-            style={{ width: "200px", height: "200px", objectFit: "cover" }}
-          />
-        </div>
-      )}
-      <button type="submit">Upload</button>
-    </form>
-  );
-}
-
-export default FilePreview;
-```
-
-✅ **Explanation**:
-
-* `URL.createObjectURL(file)` creates a temporary URL to display the file in `<img>`.
-* This method works for **images only**.
-* `preview && ...` ensures preview shows only if a file is selected.
-
----
-
-## 🔹 4. Handling Multiple File Uploads
-
-```jsx
-import React, { useState } from "react";
-
-function MultipleFiles() {
-  const [files, setFiles] = useState([]);
-  const [previews, setPreviews] = useState([]);
-
-  const handleChange = (e) => {
-    const selectedFiles = Array.from(e.target.files); // Convert FileList to Array
-    setFiles(selectedFiles);
-
-    // Generate multiple previews
-    const previewUrls = selectedFiles.map((file) => URL.createObjectURL(file));
-    setPreviews(previewUrls);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Files Submitted:", files);
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input type="file" multiple onChange={handleChange} />
-      {previews.length > 0 && (
-        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-          {previews.map((src, index) => (
-            <img
-              key={index}
-              src={src}
-              alt={`Preview ${index}`}
-              style={{ width: "100px", height: "100px", objectFit: "cover" }}
-            />
-          ))}
-        </div>
-      )}
-      <button type="submit">Upload All</button>
-    </form>
-  );
-}
-
-export default MultipleFiles;
-```
-
-✅ **Explanation**:
-
-* `multiple` attribute allows users to select multiple files.
-* `Array.from(e.target.files)` converts FileList to an array for easier manipulation.
-* Previews are displayed using `map()`.
-
----
-
-## 🔹 5. Removing Selected File Before Upload
-
-```jsx
-const removeFile = (index) => {
-  const updatedFiles = [...files];
-  updatedFiles.splice(index, 1);
-  setFiles(updatedFiles);
-
-  const updatedPreviews = [...previews];
-  updatedPreviews.splice(index, 1);
-  setPreviews(updatedPreviews);
-};
-```
-
-* Add a **remove button** below each preview image to allow users to delete a selected file.
-
----
-
-## 🔹 6. Uploading Files to Server
-
-Without any library, you can use **`FormData`**:
-
-```jsx
-const handleUpload = async () => {
-  const formData = new FormData();
-  formData.append("file", file); // for single file
-  // for multiple files: files.forEach(f => formData.append("files", f))
-
-  const response = await fetch("/upload", {
-    method: "POST",
-    body: formData,
-  });
-
-  const data = await response.json();
-  console.log("Upload Response:", data);
-};
-```
-
-✅ **Explanation**:
-
-* `FormData` automatically sets `Content-Type` to `multipart/form-data`.
-* Works with **file inputs** and other form fields simultaneously.
-
----
-
-## 🔹 7. Handling File Type & Size Validation
-
-```jsx
-const handleChange = (e) => {
-  const selectedFile = e.target.files[0];
-
-  if (!selectedFile.type.startsWith("image/")) {
-    alert("Only image files are allowed!");
-    return;
+  async function getQuizQuestions() {
+    const data = await fetch(
+      "https://opentdb.com/api.php?amount=10&category=9&difficulty=easy&type=multiple"
+    );
+    const questions = await data.json();
+    setMcqs(questions.results);
+    setQuizStarted(true);
+    setCurrentQuestionIndex(0);
+    setScore(0);
+    setShowResult(false);
   }
 
-  if (selectedFile.size > 2 * 1024 * 1024) {
-    alert("File size should be less than 2MB");
-    return;
+  function nextQuestion() {
+    if (currentQuestionIndex < mcqs.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      if (mcqs[currentQuestionIndex].correct_answer === answer) {
+        setScore(score + 10);
+      }
+      setQuizStarted(false);
+      setShowResult(true);
+    }
   }
 
-  setFile(selectedFile);
-  setPreview(URL.createObjectURL(selectedFile));
-};
-```
-
-* Validates **file type** and **size** before upload.
-* Enhances UX and prevents invalid files from being uploaded.
-
----
-
-## 🔹 8. Cleaning Up Object URLs
-
-To prevent **memory leaks**, always revoke URLs after component unmount:
-
-```jsx
-useEffect(() => {
-  return () => {
-    if (preview) URL.revokeObjectURL(preview);
-  };
-}, [preview]);
-```
-
----
-
-## 🔹 9. Complete Example — Single Image Upload with Preview
-
-```jsx
-import React, { useState, useEffect } from "react";
-
-function FileUploadPreview() {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-
-  const handleChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
-
-    if (!selectedFile.type.startsWith("image/")) {
-      alert("Please select an image file");
-      return;
-    }
-
-    setFile(selectedFile);
-    setPreview(URL.createObjectURL(selectedFile));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!file) return;
-    console.log("Uploading:", file);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL(preview);
-    };
-  }, [preview]);
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input type="file" onChange={handleChange} />
-      {preview && <img src={preview} alt="Preview" width={200} />}
-      <button type="submit">Upload</button>
-    </form>
-  );
-}
-
-export default FileUploadPreview;
-```
-
----
-
-## ✅ Summary / Best Practices
-
-| Topic          | Best Practices                                        |
-| -------------- | ----------------------------------------------------- |
-| File Input     | Use `type="file"`, store in state                     |
-| Preview        | Use `URL.createObjectURL()`                           |
-| Multiple Files | Use `multiple` attribute and `Array.from()`           |
-| Remove Files   | Maintain preview & files array, provide remove option |
-| Validation     | Check type & size before uploading                    |
-| Uploading      | Use `FormData`, POST via fetch                        |
-| Cleanup        | Revoke object URLs on unmount (`URL.revokeObjectURL`) |
-
----
-
-# 🏠 Project: **“My Photo Album”**
-
-### **Project Description:**
-
-A simple React app where users (kids) can **upload images**, see a **preview**, and maintain a **small photo album gallery** on the page.
-
-No backend required – files just stay in memory/state.
-
----
-
-## **Features**
-
-1. **Upload Single or Multiple Images**
-
-   * Select one or many images from your computer.
-   * Show a preview before adding them to the album.
-
-2. **Preview Before Adding**
-
-   * Display the image immediately after selection using `URL.createObjectURL`.
-
-3. **Add to Album**
-
-   * Once happy with preview, click **“Add to Album”**.
-   * Image gets added to a gallery below.
-
-4. **Remove Images**
-
-   * Remove unwanted images from the album.
-
-5. **Drag & Drop (Optional Advanced)**
-
-   * Users can drag files onto a box to upload images.
-
-6. **Simple Styling**
-
-   * Images arranged nicely in a grid.
-   * Hover effects or borders to make it fun.
-
----
-
-## **Folder Structure (React)**
-
-```
-my-photo-album/
-│
-├─ src/
-│  ├─ components/
-│  │  ├─ FileUploader.jsx
-│  │  └─ PhotoGallery.jsx
-│  ├─ App.jsx
-│  └─ index.js
-├─ package.json
-└─ README.md
-```
-
----
-
-## **Example Code**
-
-### **FileUploader.jsx**
-
-```jsx
-import React, { useState, useEffect } from "react";
-
-export default function FileUploader({ addToAlbum }) {
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [previews, setPreviews] = useState([]);
-
-  const handleChange = (e) => {
-    const files = Array.from(e.target.files);
-    setSelectedFiles(files);
-
-    const previewUrls = files.map((file) => URL.createObjectURL(file));
-    setPreviews(previewUrls);
-  };
-
-  const handleAddToAlbum = () => {
-    addToAlbum(selectedFiles, previews);
-    setSelectedFiles([]);
-    setPreviews([]);
-  };
-
-  useEffect(() => {
-    return () => previews.forEach((url) => URL.revokeObjectURL(url));
-  }, [previews]);
+  function handleAnswer(answer) {
+    setAnswer(answer);
+  }
 
   return (
     <div>
-      <input type="file" multiple onChange={handleChange} />
-      {previews.length > 0 && (
-        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-          {previews.map((url, index) => (
-            <img
-              key={index}
-              src={url}
-              alt={`Preview ${index}`}
-              style={{ width: "100px", height: "100px", objectFit: "cover" }}
+      <h1 className="text-green-500 font-bold">Quiz App</h1>
+      {!quizStarted && (
+        <button onClick={getQuizQuestions}>Start Quiz</button>
+      )}
+      {quizStarted && (
+        <h2>Question: {currentQuestionIndex + 1}</h2>
+        <h2>{mcqs[currentQuestionIndex].question}</h2>
+        <Options
+          correctAnswer={mcqs[currentQuestionIndex].correct_answer}
+          incorrectAnswers={mcqs[currentQuestionIndex].incorrect_answers}
+          onAnswer={handleAnswer}
+        />
+        <button onClick={nextQuestion}>Next Question</button>
+      )}
+      {showResult && (
+        <h2>Score: {score}</h2>
+        {score > 50 ? (
+          <img src="https://gifdb.com/images/high/happy-steve-carell-shaqari-life-gif-alt.gif" alt="happy" />
+        ) : (
+          <img src="https://media.tenor.com/G_6RpeT99_IAAAA/crying-sad-shayari-life.gif" alt="sad" />
+        )}
+      )}
+    </div>
+  );
+}
+```
+
+```jsx
+// Options Componnet
+export const Options = ({ correctAnswer, incorrectAnswer, onAnswer }) => {
+  const allOptions = [...incorrectAnswer, correctAnswer];
+
+  const handleOption = (value) => {
+    onAnswer(value);
+  };
+
+  return (
+    <div>
+      {allOptions.map((option, index) => {
+        return (
+          <div key={index}>
+            <input
+              type="radio"
+              name="option"
+              value={option}
+              onClick={() => handleOption(option)}
             />
-          ))}
-        </div>
-      )}
-      {previews.length > 0 && (
-        <button onClick={handleAddToAlbum}>Add to Album</button>
-      )}
+            <label>{option}</label>
+          </div>
+        );
+      })}
     </div>
   );
-}
+};
 ```
 
----
+--- 
+### 🏠 Home Task for Todo App
+. **Reset Option Selection:**
 
-### **PhotoGallery.jsx**
+   * Ensure that **no option is pre-selected** when moving to the next question.
 
-```jsx
-import React from "react";
+2. **Prevent Skipping Questions:**
 
-export default function PhotoGallery({ album, removePhoto }) {
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "20px" }}>
-      {album.map((photo, index) => (
-        <div key={index} style={{ position: "relative" }}>
-          <img
-            src={photo.preview}
-            alt={`Album ${index}`}
-            style={{ width: "150px", height: "150px", objectFit: "cover", borderRadius: "8px" }}
-          />
-          <button
-            onClick={() => removePhoto(index)}
-            style={{
-              position: "absolute",
-              top: "5px",
-              right: "5px",
-              background: "red",
-              color: "white",
-              border: "none",
-              borderRadius: "50%",
-              width: "25px",
-              height: "25px",
-              cursor: "pointer"
-            }}
-          >
-            ×
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
-```
+   * The user **cannot go to the next question** without selecting an answer.
 
----
+3. **Improve UI:**
 
-### **App.jsx**
+   * Make the quiz visually appealing using **buttons, spacing, colors, and hover effects**.
+   * Highlight the selected option and provide **visual feedback**.
 
-```jsx
-import React, { useState } from "react";
-import FileUploader from "./components/FileUploader";
-import PhotoGallery from "./components/PhotoGallery";
+4. **Display Final Result with Message:**
 
-function App() {
-  const [album, setAlbum] = useState([]);
+   * Optionally enhance final results:
 
-  const addToAlbum = (files, previews) => {
-    const newPhotos = files.map((file, index) => ({ file, preview: previews[index] }));
-    setAlbum((prev) => [...prev, ...newPhotos]);
-  };
+     * “Excellent!” for scores > 80
+     * “Good effort!” for scores 50–80
+     * “Try again!” for scores < 50
+   * Add a **retry button** to restart the quiz.
 
-  const removePhoto = (index) => {
-    setAlbum((prev) => prev.filter((_, i) => i !== index));
-  };
+5. **Randomize Options:**
 
-  return (
-    <div style={{ padding: "20px" }}>
-      <h1>📸 My Photo Album</h1>
-      <FileUploader addToAlbum={addToAlbum} />
-      <PhotoGallery album={album} removePhoto={removePhoto} />
-    </div>
-  );
-}
-
-export default App;
-```
+   * Shuffle **correct and incorrect answers** so the correct answer is not always last.
 
 ---
 
 ## 🎯 Interview Questions
 
-**Q1: How do you read a selected file in React?**
+**Q1: How do you manage question navigation in a quiz app?**
 
-> Access `e.target.files` in the `onChange` handler — it's a `FileList` object. Convert to array with `Array.from(e.target.files)` to use array methods.
+> Use an index state (`currentIndex`) that increments on "Next" click. Render the question at `questions[currentIndex]`. Check `currentIndex >= questions.length - 1` to show the results screen instead.
 
-**Q2: How do you create a preview URL for an image file?**
+**Q2: How do you shuffle an array in JavaScript for randomizing options?**
 
-> Use `URL.createObjectURL(file)` — it creates a temporary blob URL. Set it as the `src` of an `<img>`. Important: call `URL.revokeObjectURL(url)` when the preview is no longer needed to free memory.
+> Use the Fisher-Yates shuffle or the common `.sort(() => Math.random() - 0.5)` pattern. For quiz options, spread all options into an array and shuffle before rendering.
 
-**Q3: How do you upload a file to a server from React?**
+**Q3: How do you prevent selecting an answer after one is chosen?**
 
-> Use `FormData`: create a new `FormData()`, call `.append("file", file)`, then pass it as the `body` of a `fetch` POST request. Do NOT set `Content-Type` header — the browser sets it automatically with the correct boundary.
+> Store the selected answer in state. In the option's `onClick`, check if an answer is already selected — if yes, do nothing. Disable the option buttons once a selection is made.
 
-**Q4: How do you validate file type before upload?**
+**Q4: How do you calculate the score?**
 
-> Check `file.type` (e.g., `"image/png"`) or `file.name.endsWith(".pdf")`. Reject files that don't match and show an error message.
+> Maintain a `score` state. Each time `onAnswer` is called, compare the selected answer with `correctAnswer`. If they match, call `setScore(prev => prev + 1)`.
 
-**Q5: How do you handle multiple file uploads?**
+**Q5: How do you display conditional results messages like "Excellent!" vs "Try Again"?**
 
-> Add `multiple` attribute to `<input type="file" multiple />`. In `onChange`, `e.target.files` will contain all selected files. Loop over them with `Array.from()`.
+> Calculate the percentage: `(score / total) * 100`. Use a conditional: if `> 80` return "Excellent!", else if `> 50` return "Good effort!", else return "Try again!".
 
 ---
-
-## 🏠 Home Task
-
-Complete the **My Photo Album** app with full features:
-1. Upload single or multiple images at once
-2. Preview selected images before adding to album
-3. Validate: only image files allowed, max 5MB per file
-4. Add to album gallery — show in a responsive grid
-5. Remove individual photos from the gallery
-6. Show file name and size under each preview
-7. Bonus: Implement drag and drop upload using `onDragOver` and `onDrop` events

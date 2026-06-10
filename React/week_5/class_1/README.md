@@ -1,495 +1,750 @@
-# 🗺️ Routing in React — React Router DOM
+# ⚛️ Rules of Hooks, `useEffect` & Data Fetching
 
 ## 📚 Topics Covered
-- What is routing — client-side vs server-side
-- `react-router-dom` installation and setup
-- `BrowserRouter`, `Routes`, `Route` components
-- `Link` component — navigation without page reload
-- Dynamic routes with `useParams`
-- Nested routing and `Outlet`
-- `createBrowserRouter` — modern configuration-based routing
-- `RouterProvider`
-- Project: Product list with dynamic product detail pages
+- The 2 Rules of Hooks (top-level, React functions only)
+- Why these rules exist — React's call order dependency
+- `useEffect` hook — mount, update, unmount lifecycle
+- `useEffect` dependencies array
+- Cleanup function in `useEffect`
+- `fetch` API vs `axios` — full comparison
+- `async/await` inside `useEffect`
+- `AbortController` — request cancellation
+- Project: Movie Search App
 
 ---
 
-## **1️⃣ What is Routing?**
+## 📘 **Introduction**
 
-Routing is the process of **navigating between different pages or views** in an application.
-
-* **Traditional Websites** → Each click requests a **new HTML page** from the server.
-* **React (SPA – Single Page Application)** → Routing allows you to switch between **components** instead of reloading the entire page.
-  This makes apps **faster, smoother, and more interactive**.
-
-### Example Routes
-
-* `/` → Home Page
-* `/about` → About Page
-* `/contact` → Contact Page
-
----
-
-## **2️⃣ Types of Routing**
-
-### (A) Based on Handling
-
-* **Client-side Routing**
-
-  * Happens inside the browser.
-  * React Router DOM updates the component without page reload.
-  * **Faster and smoother user experience**.
-
-* **Server-side Routing**
-
-  * Each request goes to the server.
-  * Server sends a new HTML page.
-  * **Slower** because the whole page reloads.
-
----
-
-### (B) Based on Path
-
-* **Static Routing**
-
-  * Fixed path → Always shows the same component.
-
-  ```jsx
-  <Route path="/about" element={<About />} />
-  <Route path="/contact" element={<Contact />} />
-  ```
-
-  * `/about` → About Page
-  * `/contact` → Contact Page
-
-* **Dynamic Routing**
-
-  * Path contains **parameters** (`:id`, `:slug`).
-  * Used for profiles, product details, blogs, etc.
-
-  ```jsx
-  <Route path="/user/:id" element={<User />} />
-  ```
-
-  * `/user/1` → User 1 Page
-  * `/user/2` → User 2 Page
-
----
-
-## **3️⃣ React Router DOM**
-
-React itself does not have routing built in.
-👉 We use a library called **React Router DOM** to:
-
-* Define routes (`/`, `/about`, `/user/1`)
-* Navigate with `<Link>` instead of `<a>` (no reload)
-* Handle **dynamic routes** with `useParams`
-* Create **nested routes** for dashboards or layouts
-
----
-
-## **4️⃣ Installation**
-
-Install React Router DOM with:
-
-```bash
-npm install react-router-dom
-```
-
----
-
-## **5️⃣ Core Concepts in React Router**
-
-### 🔹 `BrowserRouter`
-
-`BrowserRouter` is the **wrapper** that enables routing in your app. It listens to URL changes in the browser and renders the corresponding component.
+React Hooks are special functions that let you **use state and other React features** (like lifecycle methods) in **functional components**.
 
 Example:
 
 ```jsx
-import { BrowserRouter } from "react-router-dom";
-import App from "./App";
+import { useState } from "react";
 
-function Root() {
-  return (
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  );
-}
-
-export default Root;
-```
-
-> Always wrap your app (or at least the part with routes) in `BrowserRouter`.
-
----
-
-### 🔹 `Routes` and `Route`
-
-`Routes` acts like a container for **all your routes**, and `Route` defines **each path and its component**.
-
-```jsx
-import { Routes, Route } from "react-router-dom";
-import Home from "./Home";
-import About from "./About";
-
-function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/about" element={<About />} />
-    </Routes>
-  );
+function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(count + 1)}>Clicked {count} times</button>;
 }
 ```
 
-✅ **Explanation:**
-
-* `path` → The URL path.
-* `element` → The component to render.
-* `/` → Home page.
-* `/about` → About page.
+Hooks make functional components powerful — but to make sure they work correctly, **React enforces two important rules** called **“The Rules of Hooks.”**
 
 ---
 
-### 🔹 `Link` (Navigation without Reload)
+## ⚖️ **The 2 Rules of Hooks**
 
-Instead of `<a>`, use `<Link>` to navigate.
-It changes the URL and renders the route **without refreshing** the page.
-
-```jsx
-import { Link } from "react-router-dom";
-
-function Navbar() {
-  return (
-    <nav>
-      <Link to="/">Home</Link> | <Link to="/about">About</Link>
-    </nav>
-  );
-}
-```
-> Clicking a `<Link>` updates the URL **and renders the component** instantly.
+| 🧩 Rule                                      | 🧠 Explanation                                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **1️⃣ Only Call Hooks at the Top Level**     | Never call Hooks inside loops, conditions, or nested functions.                               |
+| **2️⃣ Only Call Hooks from React Functions** | Call Hooks only from React components or custom Hooks, not from regular JavaScript functions. |
 
 ---
 
-### 🔹 Dynamic Routes with `useParams`
+# 🧩 **Rule 1: Only Call Hooks at the Top Level**
 
-Sometimes URLs have **dynamic parts**, like:
+---
 
-```
-/user/1
-/user/2
-```
+### 📜 **Meaning**
 
-We use **dynamic parameters**:
+You must call Hooks **at the top level of your React function**, before any `return`, `if`, `for`, or nested function.
 
-```jsx
-<Route path="/user/:id" element={<User />} />
-```
-
-* `:id` → Dynamic parameter
-* `useParams` → Hook to access that value
-
-Component:
+❌ **Invalid Example**
 
 ```jsx
-import { useParams } from "react-router-dom";
-
-function User() {
-  const { id } = useParams(); // get the value of :id
-  return <h1>User ID: {id}</h1>;
+function Counter() {
+  if (true) {
+    // ❌ Hook inside a condition (not allowed)
+    const [count, setCount] = useState(0);
+  }
 }
 ```
 
-Example:
+✅ **Valid Example**
 
-* URL: `/user/5` → Renders `User ID: 5`
-* URL: `/user/10` → Renders `User ID: 10`
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0); // ✅ Top level
+  if (count > 5) {
+    console.log("Count is greater than 5");
+  }
+  return <h2>{count}</h2>;
+}
+```
 
 ---
 
-### 🔹 Nested Routing
+### 🧠 **Why This Rule Exists**
 
-Nested routing means **routes inside another route**.
-Useful for dashboards, settings, or layouts.
+React uses an **internal Hook call order** to track state.
+If you call Hooks inside conditions or loops, the **order of Hooks changes**, and React **loses track** of which state belongs to which Hook.
 
-#### Step 1: Define Parent + Child Routes
+React assumes Hooks are called **in the same order on every render**.
+
+🧩 Example:
 
 ```jsx
-<Routes>
-  <Route path="/dashboard" element={<Dashboard />}>
-    <Route path="profile" element={<Profile />} />
-    <Route path="settings" element={<Settings />} />
-  </Route>
-</Routes>
+function Example({ flag }) {
+  // Hook 1
+  const [name, setName] = useState("Ali");
+
+  // ❌ Hook inside condition
+  if (flag) {
+    const [age, setAge] = useState(22);
+  }
+
+  // Hook 2
+  const [city, setCity] = useState("Lahore");
+}
 ```
 
-#### Step 2: Parent with `<Outlet />`
+If `flag` changes between renders, Hook order breaks → ❌ Error like:
 
-`<Outlet />` is where child components will render.
+> “Rendered more hooks than during the previous render.”
+
+---
+
+### 💬 **Summary**
+
+| ✅ Allowed                         | ❌ Not Allowed                       |
+| --------------------------------- | ----------------------------------- |
+| Call Hooks at top of the function | Inside `if`, `for`, or any block    |
+| Same order every render           | Changing order based on condition   |
+| Inside React component            | Inside plain JS or helper functions |
+
+---
+
+# ⚛️ **Rule 2: Only Call Hooks from React Functions**
+
+---
+
+### 📜 **Meaning**
+
+You can only call Hooks from:
+
+1. **React functional components**
+2. **Custom Hooks (functions starting with “use”)**
+
+You **cannot call Hooks** from:
+
+* Regular JavaScript functions
+* Class components
+* Event handlers (directly)
+* Loops or conditionals
+
+---
+
+### ✅ **Correct Example**
 
 ```jsx
-import { Link, Outlet } from "react-router-dom";
+function Profile() {
+  const [name, setName] = useState("Rana");
+  return <h2>{name}</h2>;
+}
+```
+
+✅ **Custom Hook Example**
+
+```jsx
+function useUserData() {
+  const [user, setUser] = useState("Rana");
+  return user;
+}
 
 function Dashboard() {
+  const user = useUserData();
+  return <h3>Welcome, {user}</h3>;
+}
+```
+
+---
+
+### ❌ **Incorrect Example**
+
+```jsx
+// ❌ Not a React component or custom hook
+function fetchUser() {
+  const [user, setUser] = useState("Rana"); // ❌ Error
+}
+```
+
+📛 React will show an error:
+
+> “Invalid Hook Call. Hooks can only be called inside the body of a function component.”
+
+---
+
+### 🧠 **Why This Rule Exists**
+
+React must **know where your Hooks live** in the component tree.
+
+If you call Hooks in random functions, React can’t associate them with any component’s state or lifecycle — causing unexpected behavior.
+
+---
+
+# 🔧 **Custom Hooks**
+
+---
+
+### 💡 What Are Custom Hooks?
+
+Custom Hooks are **your own reusable functions** that follow the **Rules of Hooks** and **start with “use”**.
+
+✅ Example:
+
+```jsx
+function useCounter() {
+  const [count, setCount] = useState(0);
+  const increment = () => setCount((c) => c + 1);
+  return { count, increment };
+}
+
+function App() {
+  const { count, increment } = useCounter();
+  return <button onClick={increment}>Count: {count}</button>;
+}
+```
+
+🧠 React identifies any function starting with `use` as a Hook and automatically applies the **Rules of Hooks** to it.
+
+---
+
+# 🔬 **Why the Rules Are Important**
+
+| 🧩 Reason              | 🔍 Description                                        |
+| ---------------------- | ----------------------------------------------------- |
+| 🧠 **Consistency**     | Ensures Hooks are called in the same order each time. |
+| 🪄 **Predictability**  | Keeps state and effect management predictable.        |
+| ⚙️ **React Internals** | React uses Hook call order to map states and effects. |
+| 🚫 **Avoid Bugs**      | Prevents invalid state mismatches and crashes.        |
+
+---
+
+# 🚫 **Common Mistakes and Fixes**
+
+| ❌ Wrong                                      | ✅ Correct                                    |
+| -------------------------------------------- | -------------------------------------------- |
+| Calling Hook inside condition                | Call at top level always                     |
+| Calling Hook in non-React function           | Move logic inside a component or custom hook |
+| Forgetting to start a custom hook with `use` | Always name like `useFetch`, `useCounter`    |
+| Using Hooks in class components              | Hooks work only in functional components     |
+
+---
+
+# 🧠 **Example of Violating vs Following Rules**
+
+### ❌ Violating the Rules
+
+```jsx
+function App() {
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (isVisible) {
+    // ❌ Not allowed
+    const [count, setCount] = useState(0);
+  }
+
+  return <button onClick={() => setIsVisible(!isVisible)}>Toggle</button>;
+}
+```
+
+### ✅ Correct Version
+
+```jsx
+function App() {
+  const [isVisible, setIsVisible] = useState(true);
+  const [count, setCount] = useState(0); // ✅ Top-level call
+
   return (
     <div>
-      <h1>Dashboard</h1>
-      <nav>
-        <Link to="profile">Profile</Link> | <Link to="settings">Settings</Link>
-      </nav>
-      <Outlet />
+      {isVisible && <p>Count: {count}</p>}
+      <button onClick={() => setIsVisible(!isVisible)}>Toggle</button>
     </div>
   );
 }
 ```
 
-#### Step 3: Child Components
-
-```jsx
-function Profile() {
-  return <h2>Profile Page</h2>;
-}
-
-function Settings() {
-  return <h2>Settings Page</h2>;
-}
-```
-
-✅ `/dashboard/profile` → Renders Profile inside Dashboard
-
 ---
 
-### 🔹 Passing Props with Outlet Context
+# 🧭 **How React Enforces These Rules**
 
-Parent (Dashboard):
+React uses a special ESLint plugin to catch invalid Hook usage:
 
-```jsx
-<Outlet context={{ user }} />
+> `eslint-plugin-react-hooks`
+
+📦 **Install:**
+
+```bash
+npm install eslint-plugin-react-hooks --save-dev
 ```
 
-Child (Profile):
+📄 **Add to `.eslintrc`**
 
-```jsx
-import { useOutletContext } from "react-router-dom";
-
-function Profile() {
-  const { user } = useOutletContext();
-  return <p>Name: {user.name}</p>;
+```json
+{
+  "plugins": ["react-hooks"],
+  "rules": {
+    "react-hooks/rules-of-hooks": "error", 
+    "react-hooks/exhaustive-deps": "warn"
+  }
 }
 ```
 
----
+This plugin **automatically checks**:
 
-## **6️⃣ New Way: `createBrowserRouter`**
-
-Earlier (Old Way):
-
-```jsx
-<BrowserRouter>
-  <Routes>
-    <Route path="/" element={<App />} />
-    <Route path="/about" element={<About />} />
-  </Routes>
-</BrowserRouter>
-```
-
-New Way:
-
-```jsx
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import Blog from "./Blog";
-import About from "./About";
-import Contact from "./Contact";
-
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Blog />,
-  },
-  {
-    path: "about",
-    element: <About />,
-  },
-  {
-    path: "contact",
-    element: <Contact />,
-  },
-]);
-
-function App() {
-  return <RouterProvider router={router} />;
-}
-
-export default App;
-```
-
-## 🔸 Example with Nested Route
-
-```jsx
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import Dashboard from "./Dashboard";
-import Profile from "./Profile";
-import Settings from "./Settings";
-
-const router = createBrowserRouter([
-  {
-    path: "dashboard",
-    element: <Dashboard />,
-    children: [
-      { path: "profile", element: <Profile /> },
-      { path: "settings", element: <Settings /> },
-    ],
-  },
-]);
-
-function App() {
-  return <RouterProvider router={router} />;
-}
-
-export default App;
-```
-
-👉 Ab `/dashboard/profile` aur `/dashboard/settings` automatically `Dashboard` ke andar render honge (nested routing).
+* You follow the two main Rules of Hooks
+* Dependencies of `useEffect` are correctly declared
 
 ---
 
-### ✅ Benefits of `createBrowserRouter`
+# 🧩 **Practical Tips**
 
-* Cleaner, centralized config
-* Supports **nested routes** easily
-* Has **loaders** (fetch data before load)
-* Has **actions** (handle form submissions)
-* Per-route **error handling**
+✅ Always:
 
----
-
-## **7️⃣ Summary Table**
-
-| Concept               | What it does                              |
-| --------------------- | ----------------------------------------- |
-| `BrowserRouter`       | Wraps the app for routing                 |
-| `Routes`              | Container for all routes                  |
-| `Route`               | Defines path + component                  |
-| `Link`                | Navigate without reloading the page       |
-| `useParams`           | Get dynamic URL parameters                |
-| `Nested Routes`       | Routes inside routes (layouts/dashboards) |
-| `createBrowserRouter` | Newer, config-based routing approach      |
+* Call Hooks **at top level**
+* Call Hooks **inside React components or custom Hooks**
+* Name your custom hooks starting with **“use”**
+* Keep Hooks order **consistent**
+* Use ESLint plugin for React Hooks
 
 ---
 
-✅ **Key Tips for Students:**
+# 🏁 **Summary**
 
-1. Always wrap your app with `BrowserRouter` (or `RouterProvider` in new way).
-2. Use `Link` instead of `<a>` for internal navigation.
-3. Use **static routes** for fixed pages, **dynamic routes** for profiles/products.
-4. Nested routing is great for dashboards.
-5. Prefer `createBrowserRouter` for bigger apps.
+| 🧩 Concept          | 📖 Description                                          |
+| ------------------- | ------------------------------------------------------- |
+| **Rule 1**          | Call Hooks only at top level (no loops/conditions)      |
+| **Rule 2**          | Call Hooks only inside React components or custom Hooks |
+| **Why Important**   | Keeps React’s internal state mapping stable             |
+| **Custom Hooks**    | Your own functions using other hooks (start with `use`) |
+| **Linting Support** | Use `eslint-plugin-react-hooks` to detect violations    |
 
 ---
 
-## **Product List + Dynamic Routing**
+# ⚔️ `fetch` vs `axios` in React + `useEffect`
+
+---
+
+## 🧠 Introduction
+
+When building React applications, you often need to **fetch data from APIs**, send data to servers, or handle asynchronous tasks.
+React itself doesn’t provide a built-in API client — so we use tools like **`fetch`** or **`axios`** to perform these operations.
+
+---
+
+# 🔹 `fetch`
+
+---
+
+### 💡 What is `fetch`?
+
+`fetch()` is a **built-in JavaScript function** that allows you to make HTTP requests to a server.
+It’s part of the **browser’s native API** — no installation is needed.
+
+It returns a **Promise**, which resolves to the response of the request.
+
+---
+
+### ✅ Basic Example
 
 ```js
-// App.jsx
-import { BrowserRouter, Routes, Route, Link, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
-
-// Home Component - Show Products
-function Home() {
-  const [products, setProducts] = useState([]);
-
-  useEffect(() => {
-    fetch("https://fakestoreapi.com/products")
-      .then((res) => res.json())
-      .then((data) => setProducts(data));
-  }, []);
-
-  return (
-    <div>
-      <h1>All Products</h1>
-      {products.map((p) => (
-        <div key={p.id}>
-          <h3>{p.title}</h3>
-          <img src={p.image} alt={p.title} width="100" />
-          <p>${p.price}</p>
-          <Link to={`/product/${p.id}`}>View Details</Link>
-          <hr />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Product Detail Page
-function ProductDetail() {
-  const { id } = useParams();
-  const [product, setProduct] = useState(null);
-
-  useEffect(() => {
-    fetch(`https://fakestoreapi.com/products/${id}`)
-      .then((res) => res.json())
-      .then((data) => setProduct(data));
-  }, [id]);
-
-  if (!product) return <h2>Loading...</h2>;
-
-  return (
-    <div>
-      <h2>{product.title}</h2>
-      <img src={product.image} alt={product.title} width="200" />
-      <p><b>Price:</b> ${product.price}</p>
-      <p>{product.description}</p>
-      <p><b>Category:</b> {product.category}</p>
-      <Link to="/">Back to Products</Link>
-    </div>
-  );
-}
-
-// Main App
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
-      </Routes>
-    </BrowserRouter>
-  );
-}
+  fetch("https://opentdb.com/api.php?amount=5&type=multiple")
+    .then((res) => res.json()) // convert response to JSON
+    .then((data) => console.log(data))
+    .catch((err) => console.error("Error:", err));
 ```
 
+---
 
-## **Home Task for Students 📝**
+### 🧩 Step-by-Step Explanation
 
-1. Create a **Navbar** with 3 links: `Home`, `About`, `Products`.
-2. Show **Products** list on `/products` using Fake Store API.
-3. When user clicks a product, open its **detail page** dynamically (`/products/:id`).
-4. Add a **Back button** on detail page.
-5. Bonus 🌟: Implement **Category Filter** (Men, Women, Electronics, etc).
+1. **`fetch(url)`** → starts an HTTP request.
+2. It returns a **Promise** that resolves when the response is received.
+3. You must manually call `.json()` to parse the response body.
+4. `.catch()` handles any **network errors**.
+
+---
+
+### ✅ Pros of `fetch`
+
+| Advantage            | Description                                                    |
+| -------------------- | -------------------------------------------------------------- |
+| 🧠 **Built-in**      | No need to install any library — works in all modern browsers. |
+| ⚡ **Lightweight**    | Minimal code footprint.                                        |
+| 💪 **Promise-based** | Works perfectly with async/await syntax.                       |
+| 🌍 **Standard API**  | Supported natively in browsers and Node (with polyfills).      |
+
+---
+
+### ❌ Cons of `fetch`
+
+| Disadvantage                            | Description                                                                               |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 🚫 Doesn’t throw errors for HTTP errors | Even if the server returns `404` or `500`, `fetch` **resolves** instead of **rejecting**. |
+| 🔄 Manual JSON conversion               | You must explicitly call `.json()` on every response.                                     |
+| 🧩 Verbose syntax                       | Requires extra handling for headers, base URLs, and errors.                               |
+
+---
+
+### ⚙️ Example with Error Handling
+
+```jsx
+  fetch("https://jsonplaceholder.typicode.com/users")
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      return res.json();
+    })
+    .then((data) => console.log(data))
+    .catch((err) => console.error("Error fetching data:", err));
+```
+
+✅ This ensures proper error messages for failed HTTP responses.
+
+---
+
+### 🧱 Using `async/await`
+
+```jsx
+  const fetchData = async () => {
+    try {
+      const res = await fetch("https://jsonplaceholder.typicode.com/users");
+      if (!res.ok) throw new Error("Failed to fetch users");
+      const data = await res.json();
+      console.log(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+```
+
+---
+
+# 🔸 `axios`
+
+---
+
+### 💡 What is `axios`?
+
+`axios` is a **third-party HTTP client library** that simplifies data fetching and request handling in JavaScript and React.
+
+📦 Install using:
+
+```bash
+npm install axios
+```
+
+Then import:
+
+```js
+import axios from "axios";
+```
+
+---
+
+### ✅ Example
+
+```jsx
+  axios
+    .get("https://opentdb.com/api.php?amount=5&type=multiple")
+    .then((res) => console.log(res.data))
+    .catch((err) => console.error(err));
+```
+
+---
+
+### ✅ Pros of `axios`
+
+| Advantage                     | Description                                                 |
+| ----------------------------- | ----------------------------------------------------------- |
+| 🧠 **Automatic JSON parsing** | No need to call `.json()`.                                  |
+| 🚫 **Error handling**         | Automatically throws errors for bad HTTP status codes.      |
+| ⚙️ **Easy configuration**     | Supports base URLs, headers, and interceptors.              |
+| 🔁 **Interceptors**           | Modify requests/responses globally (e.g., add auth tokens). |
+| ⚡ **Request cancellation**    | Supports `CancelToken` for aborting requests easily.        |
+
+---
+
+### ❌ Cons of `axios`
+
+| Disadvantage             | Description                                    |
+| ------------------------ | ---------------------------------------------- |
+| 📦 Requires installation | Must install via npm or yarn.                  |
+| 🧮 Slightly heavier      | Larger bundle size compared to native `fetch`. |
+
+---
+
+### 🧩 Example with Async/Await
+
+```jsx
+import axios from "axios";
+
+  const getData = async () => {
+    try {
+      const res = await axios.get("https://jsonplaceholder.typicode.com/users");
+      console.log(res.data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+```
+
+---
+
+# ⚖️ Comparison: `fetch` vs `axios`
+
+| Feature                 | `fetch`                     | `axios`                |
+| ----------------------- | --------------------------- | ---------------------- |
+| 🧱 Installation         | Not required                | `npm install axios`    |
+| 🔄 JSON Parsing         | Manual: `.json()`           | Automatic              |
+| 🚫 HTTP Error Handling  | Manual check (`!res.ok`)    | Automatic              |
+| 🧩 Interceptors         | ❌ Not available             | ✅ Built-in             |
+| 🧠 Base URL             | ❌ Must repeat URL           | ✅ Can define globally  |
+| 🧹 Request Cancel       | Complex (`AbortController`) | Simple (`CancelToken`) |
+| 🧮 Syntax               | Slightly verbose            | Cleaner and shorter    |
+| 🌍 Browser Support      | All modern browsers         | All modern browsers    |
+| ⚙️ File Upload/Download | Manual setup                | Built-in helpers       |
+
+---
+
+# 🧭 When to Use Which?
+
+| Scenario                           | Recommended |
+| ---------------------------------- | ----------- |
+| Small / beginner project           | ✅ `fetch`   |
+| Need simple GET/POST               | ✅ `fetch`   |
+| Large app with auth headers        | ✅ `axios`   |
+| Reusable base URL and interceptors | ✅ `axios`   |
+| File uploads/downloads             | ✅ `axios`   |
+| Pure browser-only app              | ✅ `fetch`   |
+
+---
+
+# ⚡ Example: Using `axios` with Base URL and Interceptor
+
+```jsx
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: "https://jsonplaceholder.typicode.com",
+});
+
+// Interceptor to log requests
+api.interceptors.request.use((config) => {
+  console.log("Request Sent:", config.url);
+  return config;
+});
+
+api.get("/users")
+    .then((res) => console.log(res.data))
+    .catch((err) => console.error(err));
+```
+
+---
+
+# 🧠 `useEffect`
+
+---
+
+### 💡 What is `useEffect`?
+
+`useEffect` is a **React Hook** that lets you perform **side effects** in function components.
+
+👉 Side effects are **actions that affect something outside the component**, like:
+
+* Fetching data from an API
+* Updating the DOM
+* Managing subscriptions
+* Setting up timers or intervals
+
+---
+
+### 🧩 Basic Syntax
+
+```jsx
+useEffect(() => {
+  // side effect logic
+}, [dependencies]);
+```
+
+---
+
+### ⚙️ Parameters Explained
+
+| Parameter        | Description                                            |
+| ---------------- | ------------------------------------------------------ |
+| `callback`       | Function that runs after render (side effect code).    |
+| `[dependencies]` | Array of variables — effect re-runs when these change. |
+
+---
+
+# 🔄 Lifecycle of `useEffect`
+
+| Phase          | Behavior                                  | Example              |
+| -------------- | ----------------------------------------- | -------------------- |
+| **Mounting**   | Runs once when component loads (use `[]`) | API calls, setup     |
+| **Updating**   | Runs when dependency changes              | Re-fetching, syncing |
+| **Unmounting** | Cleanup using return function             | Removing listeners   |
+
+---
+
+### 🧩 Mounting Example
+
+```jsx
+useEffect(() => {
+  console.log("Component mounted");
+}, []);
+```
+
+### 🧩 Updating Example
+
+```jsx
+const [count, setCount] = useState(0);
+
+useEffect(() => {
+  console.log("Count changed:", count);
+}, [count]);
+```
+
+### 🧹 Cleanup Example
+
+```jsx
+useEffect(() => {
+  const interval = setInterval(() => console.log("Running..."), 1000);
+
+  return () => clearInterval(interval); // cleanup when unmount
+}, []);
+```
+
+---
+
+# 📡 Data Fetching with Cleanup (using AbortController)
+
+```jsx
+useEffect(() => {
+  const controller = new AbortController();
+
+  fetch("https://jsonplaceholder.typicode.com/users", {
+    signal: controller.signal,
+  })
+    .then((res) => res.json())
+    .then((data) => console.log(data))
+    .catch((err) => {
+      if (err.name !== "AbortError") console.error(err);
+    });
+
+  return () => controller.abort(); // cancel fetch if unmounted
+}, []);
+```
+
+---
+
+# ⚙️ Common Mistakes with `useEffect`
+
+| Mistake                             | Fix                                                           |
+| ----------------------------------- | ------------------------------------------------------------- |
+| ❌ Using async directly in useEffect | ✅ Create an inner async function                              |
+| ❌ Forgetting dependencies           | ✅ Add all variables used in effect                            |
+| ❌ Missing cleanup                   | ✅ Return cleanup function                                     |
+| ❌ Running too often                 | ✅ Use correct dependency array                                |
+| ❌ Infinite re-renders               | ✅ Don’t update state directly inside effect without condition |
+
+---
+
+# 🎬 Real-World Example: Movie Search App
+
+```jsx
+import React, { useState, useEffect } from "react";
+
+const MovieSearch = () => {
+  const [query, setQuery] = useState("spiderman");
+  const [movie, setMovie] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchMovie = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(
+          `https://www.omdbapi.com/?t=${query}&apikey=your_api_key`
+        );
+        const data = await res.json();
+        if (data.Response === "True") {
+          setMovie(data);
+        } else {
+          setError("Movie not found!");
+          setMovie(null);
+        }
+      } catch (err) {
+        setError("Something went wrong!");
+      }
+      setLoading(false);
+    };
+
+    if (query) fetchMovie();
+  }, [query]);
+
+  return (
+    <div style={{ textAlign: "center", marginTop: "20px" }}>
+      <h2>🎬 Movie Search App</h2>
+      <input
+        type="text"
+        placeholder="Enter movie name..."
+        onKeyDown={(e) => e.key === "Enter" && setQuery(e.target.value)}
+      />
+      {loading && <p>Loading...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      {movie && (
+        <div>
+          <h3>
+            {movie.Title} ({movie.Year})
+          </h3>
+          <img src={movie.Poster} alt={movie.Title} />
+          <p>⭐ Rating: {movie.imdbRating}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MovieSearch;
+```
 
 ---
 
 ## 🎯 Interview Questions
 
-**Q1: What is client-side routing?**
+**Q1: What are the 2 Rules of Hooks?**
 
-> In client-side routing, the browser handles navigation without making a new request to the server. JavaScript intercepts the URL change and renders the correct component. This makes transitions instant — no full page reloads.
+> 1. Only call hooks at the **top level** — never inside loops, conditions, or nested functions. 2. Only call hooks from **React functional components** or custom hooks — not regular JavaScript functions. These rules ensure React can maintain hook call order between renders.
 
-**Q2: What is the difference between `Link` and an `<a>` tag in React?**
+**Q2: What are the three phases of `useEffect`?**
 
-> `<a href>` causes a full page reload, losing all React state. `Link` from React Router changes the URL and renders the new component client-side — without any page reload or state loss.
+> Mount (runs after first render), Update (runs after re-render when dependencies change), Unmount (cleanup function runs when component is removed). The dependency array controls when the effect re-runs.
 
-**Q3: What is `useParams` and when do you use it?**
+**Q3: What does an empty dependency array `[]` mean in `useEffect`?**
 
-> `useParams` returns an object containing the dynamic segments of the current URL. Used when you have a route like `/products/:id` — calling `useParams()` gives `{ id: "42" }` so you can fetch the right data.
+> The effect runs once after the first render and never again — equivalent to `componentDidMount` in class components.
 
-**Q4: What is the difference between `BrowserRouter` and `createBrowserRouter`?**
+**Q4: What is the difference between `fetch` and `axios`?**
 
-> `BrowserRouter` wraps JSX routes declaratively. `createBrowserRouter` (React Router v6.4+) takes a configuration array and supports advanced features like data loaders, actions, and error elements. It's the recommended modern approach.
+> `fetch` is native browser API — needs manual JSON parsing, no automatic error handling for non-2xx status. `axios` is a library with automatic JSON parsing, automatic error throwing for non-2xx responses, request/response interceptors, and better request cancellation support.
 
-**Q5: What is an `Outlet` in React Router?**
+**Q5: What is the cleanup function in `useEffect` and when do you need it?**
 
-> `Outlet` is a placeholder in a parent route's component where child route components are rendered. It's what makes nested routing work — the parent layout stays rendered while the child content changes.
+> The optional function returned from `useEffect` — runs when the component unmounts or before the effect re-runs. Use it to cancel API requests (AbortController), clear timers, or unsubscribe from subscriptions to avoid memory leaks.
 
 ---
+
+## 🏠 Home Task
+
+Build a **News Feed App**:
+1. Fetch top headlines from a news API (e.g., NewsAPI or GNews)
+2. Show article title, description, image, and source
+3. Loading spinner while fetching
+4. Error message if fetch fails
+5. Search input — debounced (wait 500ms), fetches new results on change
+6. Category tabs: Technology, Sports, Business, Health — each triggers a new fetch
+7. Use `AbortController` to cancel previous request when category changes
+8. Bonus: Implement `useEffect` cleanup to prevent state updates on unmounted component

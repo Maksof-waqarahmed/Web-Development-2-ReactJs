@@ -1,246 +1,86 @@
-# 🔄 TanStack Query (React Query) — Part 1
+# 🚀 React 18 Concurrent Features
 
 ## 📚 Topics Covered
-- Server state vs client state — the key difference
-- Why TanStack Query vs manual `useEffect` + `useState`
-- Installation and setup — `QueryClient` and `QueryClientProvider`
-- `useQuery` hook — fetching and caching data
-- `queryKey` — how caching and deduplication works
-- `isLoading` vs `isFetching` difference
-- `staleTime` and `gcTime` — cache configuration
-- Dynamic queries with `enabled` option
-- Manual `refetch` and refresh buttons
-- React Query DevTools
-- Project: Posts App with list and detail view
+- What is Concurrent Mode and why React 18 introduced it
+- `useTransition` — mark state updates as non-urgent
+- `isPending` — showing loading state during transitions
+- `useDeferredValue` — defer a slow value update
+- `useTransition` vs `useDeferredValue` — comparison
+- React 18 Automatic Batching
+- `startTransition` as standalone function
+- Project: User Dashboard with large dataset filtering
 
 ---
 
-## Server State Management, `useQuery`, `QueryClient`, DevTools
+## `useTransition`, `useDeferredValue` — Keep Your UI Responsive
 
 ---
 
-## 🔹 What is TanStack Query?
+## 🔹 Why Concurrent Features?
 
-TanStack Query (formerly **React Query**) is a powerful library for **managing server state** in React. It handles:
+Before React 18, all state updates were **urgent** — React would stop everything and re-render immediately. This caused UI to **freeze** during heavy updates (like filtering a huge list).
 
-- **Fetching** data from APIs
-- **Caching** responses
-- **Re-fetching** when data gets stale
-- **Synchronizing** data across components
-- **Loading and error states** automatically
+React 18 introduced **Concurrent Mode** — React can now **pause, resume, and prioritize** renders.
 
 ```mermaid
 graph LR
-    A[Without TanStack Query] --> B[Manual useEffect + useState]
-    B --> C[Loading state manually]
-    B --> D[Error state manually]
-    B --> E[No caching]
-    B --> F[Duplicate requests]
-    B --> G[Complex refetch logic]
+    subgraph "Before React 18"
+        A1[User Types] --> B1[Heavy Render Starts]
+        B1 --> C1[UI Freezes 😫]
+        C1 --> D1[Render Completes]
+    end
 
-    H[With TanStack Query] --> I[useQuery one line]
-    I --> J[Auto loading/error states ✅]
-    I --> K[Smart caching ✅]
-    I --> L[Background refetch ✅]
-    I --> M[Deduplication ✅]
-
-    style A fill:#ff6b6b,color:#fff
-    style H fill:#4caf50,color:#fff
+    subgraph "React 18 Concurrent"
+        A2[User Types] --> B2[Mark as Non-Urgent]
+        B2 --> C2[UI Stays Responsive ✅]
+        C2 --> D2[Heavy Render in Background]
+    end
 ```
 
 ---
 
-## 🔹 Installation
+## 🔹 1. `useTransition` — Mark Updates as Non-Urgent
 
-```bash
-npm install @tanstack/react-query
-# Optional but highly recommended DevTools
-npm install @tanstack/react-query-devtools
-```
+### 🧠 What is it?
 
----
+`useTransition` lets you mark a state update as a **transition** (non-urgent). React will keep the current UI responsive while processing the heavy update in the background.
 
-## 🔹 Setup — QueryClient & Provider
-
-Wrap your app with `QueryClientProvider` — this provides the cache to all components:
+### 🧩 Syntax
 
 ```jsx
-// src/main.jsx
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import App from "./App";
-
-// Create the client — configure defaults here
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,  // 5 minutes — data is fresh for 5 mins
-      retry: 2,                    // retry failed requests 2 times
-      refetchOnWindowFocus: true,  // refetch when user switches back to tab
-    },
-  },
-});
-
-createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-      {/* DevTools panel — only shows in development */}
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
-  </StrictMode>
-);
+const [isPending, startTransition] = useTransition();
 ```
+
+- `isPending` — `true` while the transition is running
+- `startTransition` — wrap your non-urgent state update inside
 
 ---
 
-## 🔹 `useQuery` — Fetch Data
-
-### 🧩 Basic Syntax
+### 📍 Problem Without useTransition
 
 ```jsx
-const { data, isLoading, isError, error } = useQuery({
-  queryKey: ["uniqueKey"],
-  queryFn: () => fetch("/api/data").then(r => r.json()),
-});
-```
+import { useState } from "react";
 
-- `queryKey` — unique identifier for this query (used for caching)
-- `queryFn` — async function that returns the data
+// Generate large list
+const allItems = Array.from({ length: 10000 }, (_, i) => `Item ${i + 1}`);
 
----
+function SlowSearch() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState(allItems);
 
-### 📍 Before TanStack Query (Verbose)
-
-```jsx
-function UserList() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetch("https://jsonplaceholder.typicode.com/users")
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to fetch");
-        return r.json();
-      })
-      .then((data) => {
-        setUsers(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  return (
-    <ul>{users.map((u) => <li key={u.id}>{u.name}</li>)}</ul>
-  );
-}
-```
-
----
-
-### ✅ With TanStack Query (Clean!)
-
-```jsx
-import { useQuery } from "@tanstack/react-query";
-
-async function fetchUsers() {
-  const res = await fetch("https://jsonplaceholder.typicode.com/users");
-  if (!res.ok) throw new Error("Failed to fetch users");
-  return res.json();
-}
-
-function UserList() {
-  const { data: users, isLoading, isError, error } = useQuery({
-    queryKey: ["users"],
-    queryFn: fetchUsers,
-  });
-
-  if (isLoading) return <div>⏳ Loading...</div>;
-  if (isError) return <div>❌ Error: {error.message}</div>;
-
-  return (
-    <ul>
-      {users.map((user) => (
-        <li key={user.id}>{user.name} — {user.email}</li>
-      ))}
-    </ul>
-  );
-}
-```
-
-Same functionality — 50% less code! ✅
-
----
-
-## 🔹 Query Key — The Cache Key
-
-The `queryKey` is how TanStack Query identifies and caches data:
-
-```jsx
-// Static key — same cache entry
-useQuery({ queryKey: ["users"], queryFn: fetchUsers });
-
-// Dynamic key — different cache entry per user
-useQuery({ queryKey: ["user", userId], queryFn: () => fetchUser(userId) });
-
-// With filters — different cache per filter
-useQuery({
-  queryKey: ["users", { status: "active", page: 2 }],
-  queryFn: () => fetchUsers({ status: "active", page: 2 }),
-});
-```
-
-> **Rule:** Include everything the query function depends on in the key!
-
----
-
-## 🔹 All useQuery Return Values
-
-```jsx
-const {
-  data,           // The fetched data (undefined while loading)
-  isLoading,      // true on first fetch (no cached data yet)
-  isFetching,     // true whenever a request is in-flight (including refetches)
-  isError,        // true if the query failed
-  error,          // the Error object if failed
-  isSuccess,      // true if data fetched successfully
-  status,         // "loading" | "error" | "success"
-  refetch,        // function to manually trigger a refetch
-  dataUpdatedAt,  // timestamp of last successful fetch
-} = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
-```
-
----
-
-### 📍 isFetching vs isLoading
-
-```jsx
-function Users() {
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["users"],
-    queryFn: fetchUsers,
-  });
+  const handleChange = (e) => {
+    setQuery(e.target.value);
+    // This heavy filter blocks the input from updating!
+    setResults(allItems.filter((item) =>
+      item.toLowerCase().includes(e.target.value.toLowerCase())
+    ));
+  };
 
   return (
     <div>
-      {/* Shows only on FIRST load (no cached data) */}
-      {isLoading && <div>Loading users...</div>}
-
-      {/* Shows on any request — including background refetch */}
-      {isFetching && <div style={{ position: "fixed", top: 8, right: 8 }}>
-        🔄 Refreshing...
-      </div>}
-
-      {data?.map((user) => <div key={user.id}>{user.name}</div>)}
+      <input value={query} onChange={handleChange} placeholder="Search..." />
+      {/* UI freezes while filtering 10,000 items */}
+      {results.map((item) => <div key={item}>{item}</div>)}
     </div>
   );
 }
@@ -248,276 +88,436 @@ function Users() {
 
 ---
 
-## 🔹 Caching & Stale Time
-
-```mermaid
-sequenceDiagram
-    participant Component
-    participant Cache
-    participant Server
-
-    Component->>Cache: Request ["users"]
-    Cache->>Server: No cache — fetch!
-    Server-->>Cache: Users data
-    Cache-->>Component: Data (fresh) ✅
-
-    Note over Cache: staleTime: 5 minutes passes...
-
-    Component->>Cache: Request ["users"] again
-    Cache-->>Component: Stale data (show immediately) ✅
-    Cache->>Server: Background refetch
-    Server-->>Cache: Updated data
-    Cache-->>Component: Updated data ✅
-```
+### ✅ Solution With useTransition
 
 ```jsx
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,     // Fresh for 5 minutes
-      gcTime: 1000 * 60 * 10,        // Keep in cache for 10 minutes
-    },
-  },
-});
+import { useState, useTransition } from "react";
 
-// Or per-query
-useQuery({
-  queryKey: ["config"],
-  queryFn: fetchConfig,
-  staleTime: Infinity,  // Never considered stale (use for static data)
-});
-```
+const allItems = Array.from({ length: 10000 }, (_, i) => `Item ${i + 1}`);
 
----
+function FastSearch() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState(allItems);
+  const [isPending, startTransition] = useTransition();
 
-## 🔹 Dynamic Queries — Fetch by ID
+  const handleChange = (e) => {
+    const value = e.target.value;
 
-```jsx
-import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+    // Urgent: update input immediately
+    setQuery(value);
 
-async function fetchPost(id) {
-  const res = await fetch(`https://jsonplaceholder.typicode.com/posts/${id}`);
-  if (!res.ok) throw new Error("Post not found");
-  return res.json();
-}
-
-function PostDetail() {
-  const { id } = useParams();
-
-  const { data: post, isLoading, isError } = useQuery({
-    queryKey: ["post", id],    // key includes id — separate cache per post
-    queryFn: () => fetchPost(id),
-    enabled: !!id,             // only run when id exists
-  });
-
-  if (isLoading) return <div>⏳ Loading post...</div>;
-  if (isError) return <div>❌ Post not found</div>;
-
-  return (
-    <article>
-      <h1>{post.title}</h1>
-      <p>{post.body}</p>
-    </article>
-  );
-}
-```
-
----
-
-## 🔹 `enabled` Option — Conditional Queries
-
-```jsx
-function UserPosts({ userId }) {
-  // Only fetch posts AFTER we have a userId
-  const { data: posts } = useQuery({
-    queryKey: ["posts", userId],
-    queryFn: () => fetchPostsByUser(userId),
-    enabled: !!userId,  // won't run if userId is null/undefined
-  });
-
-  return <div>{posts?.map(p => <div key={p.id}>{p.title}</div>)}</div>;
-}
-```
-
----
-
-## 🔹 Manual Refetch & Refresh Button
-
-```jsx
-function WeatherWidget() {
-  const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ["weather"],
-    queryFn: fetchWeather,
-    staleTime: 1000 * 60, // 1 minute
-  });
-
-  return (
-    <div style={{ padding: 20, border: "1px solid #ddd", borderRadius: 8 }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h3>🌤️ Weather</h3>
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          style={{ padding: "4px 12px" }}
-        >
-          {isFetching ? "Refreshing..." : "🔄 Refresh"}
-        </button>
-      </div>
-
-      {isLoading ? (
-        <div>Loading weather...</div>
-      ) : (
-        <div>
-          <p>Temperature: {data?.temp}°C</p>
-          <p>Condition: {data?.condition}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-```
-
----
-
-## 🔹 Complete Example — Posts App
-
-```jsx
-// api/posts.js
-export const fetchPosts = async () => {
-  const res = await fetch("https://jsonplaceholder.typicode.com/posts?_limit=10");
-  if (!res.ok) throw new Error("Failed to fetch posts");
-  return res.json();
-};
-
-export const fetchPost = async (id) => {
-  const res = await fetch(`https://jsonplaceholder.typicode.com/posts/${id}`);
-  if (!res.ok) throw new Error("Post not found");
-  return res.json();
-};
-```
-
-```jsx
-// components/PostList.jsx
-import { useQuery } from "@tanstack/react-query";
-import { fetchPosts } from "../api/posts";
-
-function PostList({ onSelect }) {
-  const { data: posts, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["posts"],
-    queryFn: fetchPosts,
-    staleTime: 1000 * 30,
-  });
-
-  if (isLoading) return <div style={{ padding: 20 }}>⏳ Loading posts...</div>;
-  if (isError) return <div style={{ color: "red" }}>Error: {error.message}</div>;
-
-  return (
-    <div>
-      {isFetching && (
-        <div style={{ fontSize: 12, color: "#999", padding: "4px 12px" }}>
-          🔄 Updating...
-        </div>
-      )}
-      {posts.map((post) => (
-        <div
-          key={post.id}
-          onClick={() => onSelect(post.id)}
-          style={{
-            padding: 12,
-            borderBottom: "1px solid #eee",
-            cursor: "pointer",
-          }}
-          onMouseEnter={(e) => e.target.style.background = "#f5f5f5"}
-          onMouseLeave={(e) => e.target.style.background = "transparent"}
-        >
-          <strong>#{post.id}</strong> {post.title}
-        </div>
-      ))}
-    </div>
-  );
-}
-```
-
-```jsx
-// components/PostDetail.jsx
-import { useQuery } from "@tanstack/react-query";
-import { fetchPost } from "../api/posts";
-
-function PostDetail({ postId }) {
-  const { data: post, isLoading } = useQuery({
-    queryKey: ["post", postId],
-    queryFn: () => fetchPost(postId),
-    enabled: !!postId,
-  });
-
-  if (!postId) return <div style={{ padding: 20, color: "#999" }}>← Select a post</div>;
-  if (isLoading) return <div style={{ padding: 20 }}>⏳ Loading...</div>;
+    // Non-urgent: filtering can wait
+    startTransition(() => {
+      setResults(
+        allItems.filter((item) =>
+          item.toLowerCase().includes(value.toLowerCase())
+        )
+      );
+    });
+  };
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>{post.title}</h2>
-      <p style={{ lineHeight: 1.6 }}>{post.body}</p>
-      <p style={{ color: "#999", fontSize: 12 }}>Post ID: {post.id}</p>
+      <input
+        value={query}
+        onChange={handleChange}
+        placeholder="Search 10,000 items..."
+        style={{ padding: 8, width: 300, fontSize: 16 }}
+      />
+
+      {isPending && (
+        <p style={{ color: "#999" }}>⏳ Updating results...</p>
+      )}
+
+      <p>{results.length} results</p>
+
+      <div style={{ height: 400, overflowY: "auto" }}>
+        {results.map((item) => (
+          <div key={item} style={{ padding: 4, borderBottom: "1px solid #eee" }}>
+            {item}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 ```
 
-```jsx
-// App.jsx
-import { useState } from "react";
-import PostList from "./components/PostList";
-import PostDetail from "./components/PostDetail";
+---
 
-function App() {
-  const [selectedId, setSelectedId] = useState(null);
+### 📍 Real World: Tab Switching
+
+```jsx
+import { useState, useTransition, memo } from "react";
+
+// Simulate heavy component
+const HeavyTab = memo(function HeavyTab({ tab }) {
+  // Simulate slow render
+  const start = Date.now();
+  while (Date.now() - start < 100) {} // artificial delay
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", height: "100vh" }}>
-      <div style={{ borderRight: "1px solid #ddd", overflowY: "auto" }}>
-        <h3 style={{ padding: "12px 16px", borderBottom: "1px solid #eee" }}>
-          📝 Posts
-        </h3>
-        <PostList onSelect={setSelectedId} />
+    <div style={{ padding: 20 }}>
+      <h3>Content for: {tab}</h3>
+      <p>This tab has a lot of content that takes time to render.</p>
+    </div>
+  );
+});
+
+const tabs = ["Home", "About", "Products", "Contact"];
+
+function TabContainer() {
+  const [activeTab, setActiveTab] = useState("Home");
+  const [isPending, startTransition] = useTransition();
+
+  const handleTabChange = (tab) => {
+    startTransition(() => {
+      setActiveTab(tab);
+    });
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => handleTabChange(tab)}
+            style={{
+              padding: "8px 16px",
+              background: activeTab === tab ? "#2196f3" : "#eee",
+              color: activeTab === tab ? "#fff" : "#333",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+              opacity: isPending ? 0.7 : 1,
+            }}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
-      <PostDetail postId={selectedId} />
+
+      {isPending ? (
+        <div style={{ opacity: 0.5 }}>Loading...</div>
+      ) : (
+        <HeavyTab tab={activeTab} />
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## 🔹 2. `useDeferredValue` — Defer a Value Update
+
+### 🧠 What is it?
+
+`useDeferredValue` takes a value and returns a **deferred version** of it. The deferred value "lags behind" the real value during heavy renders — React renders the urgent update first, then catches up.
+
+### 🧩 Syntax
+
+```jsx
+const deferredValue = useDeferredValue(value);
+```
+
+---
+
+### 📍 useTransition vs useDeferredValue
+
+| | `useTransition` | `useDeferredValue` |
+|--|-----------------|-------------------|
+| Controls | The **state update** | The **value** |
+| Use when | You own the state update code | You receive value as a prop or can't modify state setter |
+| Has `isPending`? | Yes ✅ | No (use `value !== deferredValue`) |
+
+---
+
+### 📍 Example: Deferred Search Results
+
+```jsx
+import { useState, useDeferredValue, memo } from "react";
+
+const allItems = Array.from({ length: 10000 }, (_, i) => `Product ${i + 1}`);
+
+// Heavy list component
+const SearchResults = memo(function SearchResults({ query }) {
+  const filtered = allItems.filter((item) =>
+    item.toLowerCase().includes(query.toLowerCase())
+  );
+
+  return (
+    <div>
+      <p>{filtered.length} results</p>
+      {filtered.slice(0, 50).map((item) => (
+        <div key={item} style={{ padding: 4 }}>
+          {item}
+        </div>
+      ))}
+    </div>
+  );
+});
+
+function DeferredSearch() {
+  const [query, setQuery] = useState("");
+
+  // Deferred version lags behind during heavy renders
+  const deferredQuery = useDeferredValue(query);
+
+  // true = stale results being shown
+  const isStale = query !== deferredQuery;
+
+  return (
+    <div style={{ padding: 20 }}>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search products..."
+        style={{ padding: 8, width: 300 }}
+      />
+
+      <div style={{ opacity: isStale ? 0.5 : 1 }}>
+        {isStale && <span style={{ color: "#999" }}>Updating...</span>}
+        <SearchResults query={deferredQuery} />
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+### 📍 Real World: Live Preview with Deferred Rendering
+
+```jsx
+import { useState, useDeferredValue } from "react";
+
+// Simulate expensive markdown renderer
+function MarkdownPreview({ markdown }) {
+  // Simulate slow operation
+  const start = Date.now();
+  while (Date.now() - start < 50) {}
+
+  return (
+    <div
+      style={{
+        padding: 16,
+        background: "#f8f9fa",
+        borderRadius: 8,
+        minHeight: 200,
+        border: "1px solid #dee2e6",
+      }}
+    >
+      <h4>Preview:</h4>
+      <pre style={{ whiteSpace: "pre-wrap" }}>{markdown}</pre>
     </div>
   );
 }
 
-export default App;
+function Editor() {
+  const [text, setText] = useState("");
+  const deferredText = useDeferredValue(text);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, padding: 20 }}>
+      <div>
+        <h4>Editor:</h4>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          style={{ width: "100%", height: 200, padding: 8 }}
+          placeholder="Type your markdown here..."
+        />
+      </div>
+
+      {/* Preview uses deferred value — won't block typing */}
+      <MarkdownPreview markdown={deferredText} />
+    </div>
+  );
+}
+```
+
+---
+
+## 🔹 React 18 Other Features
+
+### Automatic Batching
+
+Before React 18, multiple state updates inside `setTimeout` or Promises caused multiple re-renders:
+
+```jsx
+// Before React 18: 2 re-renders
+setTimeout(() => {
+  setCount(c => c + 1);  // re-render 1
+  setName("Ali");         // re-render 2
+}, 1000);
+
+// React 18: Automatically batched = 1 re-render!
+setTimeout(() => {
+  setCount(c => c + 1);  // batched
+  setName("Ali");         // batched → 1 re-render only
+}, 1000);
+```
+
+### `startTransition` as standalone function
+
+```jsx
+import { startTransition } from "react";
+
+// Can use without the hook if you don't need isPending
+startTransition(() => {
+  setHeavyState(newValue);
+});
+```
+
+---
+
+## 🔹 When to Use Each
+
+```mermaid
+flowchart TD
+    A[UI feels sluggish or freezes?] --> B{Can you modify the state update?}
+    B -->|Yes| C[Use useTransition]
+    B -->|No — value comes from props| D[Use useDeferredValue]
+    C --> E[Wrap setter in startTransition]
+    D --> F[Pass deferredValue to heavy component]
+    E --> G[Show isPending spinner]
+    F --> H[Check value !== deferredValue for stale UI]
+```
+
+---
+
+## 🔹 Complete App Example
+
+```jsx
+import { useState, useTransition, useDeferredValue, memo } from "react";
+
+// Generate fake user data
+const users = Array.from({ length: 5000 }, (_, i) => ({
+  id: i,
+  name: `User ${i + 1}`,
+  email: `user${i + 1}@example.com`,
+  role: i % 3 === 0 ? "Admin" : i % 3 === 1 ? "Editor" : "Viewer",
+}));
+
+const UserTable = memo(function UserTable({ query, role }) {
+  const filtered = users.filter(
+    (u) =>
+      u.name.toLowerCase().includes(query.toLowerCase()) &&
+      (role === "All" || u.role === role)
+  );
+
+  return (
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead>
+        <tr style={{ background: "#f0f0f0" }}>
+          <th style={{ padding: 8, textAlign: "left" }}>Name</th>
+          <th style={{ padding: 8, textAlign: "left" }}>Email</th>
+          <th style={{ padding: 8, textAlign: "left" }}>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filtered.slice(0, 20).map((user) => (
+          <tr key={user.id} style={{ borderBottom: "1px solid #eee" }}>
+            <td style={{ padding: 8 }}>{user.name}</td>
+            <td style={{ padding: 8 }}>{user.email}</td>
+            <td style={{ padding: 8 }}>{user.role}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+});
+
+function UserDashboard() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("All");
+  const [isPending, startTransition] = useTransition();
+
+  const deferredQuery = useDeferredValue(searchQuery);
+
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value); // urgent
+    startTransition(() => {
+      // role filter is non-urgent
+    });
+  };
+
+  const handleRole = (role) => {
+    startTransition(() => {
+      setRoleFilter(role);
+    });
+  };
+
+  return (
+    <div style={{ padding: 20, maxWidth: 800, margin: "0 auto" }}>
+      <h2>👥 User Dashboard</h2>
+
+      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+        <input
+          value={searchQuery}
+          onChange={handleSearch}
+          placeholder="Search users..."
+          style={{ flex: 1, padding: 8 }}
+        />
+        {["All", "Admin", "Editor", "Viewer"].map((role) => (
+          <button
+            key={role}
+            onClick={() => handleRole(role)}
+            style={{
+              padding: "8px 12px",
+              background: roleFilter === role ? "#2196f3" : "#eee",
+              color: roleFilter === role ? "#fff" : "#333",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
+          >
+            {role}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.2s" }}>
+        {isPending && <p style={{ color: "#666" }}>⏳ Filtering...</p>}
+        <UserTable query={deferredQuery} role={roleFilter} />
+      </div>
+    </div>
+  );
+}
+
+export default UserDashboard;
 ```
 
 ---
 
 ## 🎯 Interview Questions
 
-**Q1: What is the difference between server state and client state?**
+**Q1: What is Concurrent Mode in React 18?**
 
-> Client state is local UI state (modal open/closed, form values). Server state is data from an API that needs to be fetched, cached, and kept in sync. TanStack Query manages server state.
+> Concurrent Mode allows React to prepare multiple versions of the UI at the same time. It can pause, resume, or abandon renders to keep the UI responsive. `useTransition` and `useDeferredValue` expose this capability.
 
-**Q2: What is `staleTime`?**
+**Q2: What's the difference between `useTransition` and `useDeferredValue`?**
 
-> The time data is considered "fresh". During this period, re-renders won't trigger new requests. After staleTime, data is "stale" and a background refetch happens next time the query is used.
+> `useTransition` wraps the **state setter** — you control what's non-urgent. `useDeferredValue` wraps the **value** — useful when you receive the value as a prop or can't control the setter. Both defer heavy renders but from different angles.
 
-**Q3: What is `gcTime` (formerly `cacheTime`)?**
+**Q3: Does `startTransition` make renders faster?**
 
-> How long data stays in cache after all components using it unmount. Defaults to 5 minutes. After this, cached data is garbage collected.
+> No — it just changes the **priority**. The heavy render still happens, but it doesn't block urgent updates (like user input). The UI stays interactive.
 
-**Q4: Why use TanStack Query instead of just `useEffect`?**
+**Q4: When would you use `isPending` from `useTransition`?**
 
-> TanStack Query provides caching, deduplication (two components using same key = one request), background refetching, stale data management, loading/error states, retry logic, and DevTools — all out of the box.
+> To show a loading/spinner state while the deferred render is in progress — so users know something is updating.
 
 ---
 
 ## 🏠 Home Task
 
-Build a **GitHub User Search App**:
-1. Search input for GitHub username
-2. Use `useQuery` with `enabled: !!username` to fetch user profile
-3. Show user's avatar, name, bio, followers, following, repos
-4. On repo click — fetch and show repo details (another `useQuery` with repo id)
-5. Add a "Refresh" button using `refetch`
-6. Show `isFetching` spinner in top-right corner
-7. Open DevTools and watch the cache update!
+Build a **Country Search App**:
+1. List of 200+ countries (name, population, capital, region)
+2. Search input using `useTransition` — input stays responsive
+3. Filter by region using `useDeferredValue`
+4. Show "Searching..." when `isPending` is true
+5. Show faded/opaque list while deferred value catches up
+6. Stats bar: total results found

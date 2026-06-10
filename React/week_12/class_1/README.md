@@ -1,360 +1,504 @@
-# 🔐 Environment Variables in React
+# 🛡️ Error Boundaries & Suspense for Data Fetching
 
 ## 📚 Topics Covered
-- What are environment variables and why use them
-- `.env`, `.env.local`, `.env.development`, `.env.production` files
-- Vite prefix rule — only `VITE_` variables reach the browser
-- `import.meta.env` — accessing variables in React
-- CRA: `REACT_APP_` prefix and `process.env`
-- Centralizing env config in `src/config/env.js`
-- `.gitignore` — never commit secrets
-- `.env.example` — template for teammates
-- Feature flags with environment variables
-- What is safe vs unsafe to expose in frontend
+- Why error handling matters — blank screen problem
+- Error Boundary class component — `getDerivedStateFromError` and `componentDidCatch`
+- Custom fallback UI with reset functionality
+- What errors are NOT caught by boundaries (async, event handlers)
+- Error boundary placement strategy
+- `react-error-boundary` package
+- `Suspense` for async data fetching (React 18+)
+- Combining `ErrorBoundary` + `Suspense` + `React.lazy()`
+- Project: Dashboard with per-widget error boundaries
 
 ---
 
-## `.env` Files, Secrets Management, Vite & CRA
+## Graceful Error Handling in React
 
 ---
 
-## 🔹 What Are Environment Variables?
+## 🔹 Why Error Handling Matters?
 
-Environment variables store **configuration values** that change between environments (development, staging, production) — like API URLs, API keys, feature flags.
+When a JavaScript error occurs inside a component, it can crash the **entire React app** and show a blank white screen. Users see nothing helpful.
 
 ```mermaid
-graph LR
-    A[Your React App] --> B{Which Environment?}
-    B -->|Development| C[.env.development\nAPI_URL=http://localhost:3000]
-    B -->|Production| D[.env.production\nAPI_URL=https://api.myapp.com]
-    B -->|Test| E[.env.test\nAPI_URL=http://test-server]
-    style C fill:#ff9800,color:#fff
-    style D fill:#4caf50,color:#fff
-    style E fill:#2196f3,color:#fff
-```
-
----
-
-## 🔹 Why Use Environment Variables?
-
-```jsx
-// ❌ BAD — hardcoded values in code
-const API_URL = "https://api.example.com"; // Different in dev vs prod!
-const API_KEY = "sk-abc123supersecret";     // Secret in code! Dangerous!
-
-// ✅ GOOD — from environment variables
-const API_URL = import.meta.env.VITE_API_URL;
-const API_KEY = import.meta.env.VITE_API_KEY;
-```
-
-**Benefits:**
-- Different values per environment (dev/prod/test)
-- Secrets not committed to git
-- Easy to change without touching code
-- Team members can have their own values
-
----
-
-## 🔹 Vite — Environment Variables (Recommended)
-
-### File Names
-
-| File | When Used |
-|------|-----------|
-| `.env` | All environments (default) |
-| `.env.local` | Local overrides (not committed to git) |
-| `.env.development` | Only in `npm run dev` |
-| `.env.production` | Only in `npm run build` |
-| `.env.test` | Only in test environment |
-
-### ⚠️ Important: Prefix Rule
-
-In Vite, **only variables prefixed with `VITE_`** are exposed to your React code.
-
-```bash
-# .env
-VITE_API_URL=https://api.example.com      # ✅ Accessible in React
-VITE_APP_NAME=My Store                     # ✅ Accessible
-SECRET_KEY=super-secret-123               # ❌ NOT accessible (no VITE_ prefix)
-DATABASE_URL=postgres://...               # ❌ NOT accessible (backend only)
-```
-
----
-
-### 📍 Creating .env Files
-
-```bash
-# .env (project root, same level as package.json)
-VITE_API_URL=https://jsonplaceholder.typicode.com
-VITE_APP_NAME=My React App
-VITE_ENABLE_ANALYTICS=false
-VITE_MAX_UPLOAD_SIZE=5242880
-```
-
-```bash
-# .env.local (your personal overrides — never commit this)
-VITE_API_URL=http://localhost:4000
-VITE_DEBUG=true
-```
-
-```bash
-# .env.production (for production builds)
-VITE_API_URL=https://api.myapp.com
-VITE_ENABLE_ANALYTICS=true
-```
-
----
-
-### 📍 Accessing in React
-
-```jsx
-// In any component or JS file
-const apiUrl = import.meta.env.VITE_API_URL;
-const appName = import.meta.env.VITE_APP_NAME;
-const isDebug = import.meta.env.VITE_DEBUG === "true";
-const maxSize = Number(import.meta.env.VITE_MAX_UPLOAD_SIZE);
-
-// Built-in Vite variables (no VITE_ prefix needed)
-const isDev = import.meta.env.DEV;        // true in development
-const isProd = import.meta.env.PROD;       // true in production
-const mode = import.meta.env.MODE;         // "development" | "production"
-```
-
----
-
-### 📍 Centralize in a config file
-
-```jsx
-// src/config/env.js
-export const config = {
-  apiUrl: import.meta.env.VITE_API_URL || "http://localhost:3000",
-  appName: import.meta.env.VITE_APP_NAME || "My App",
-  enableAnalytics: import.meta.env.VITE_ENABLE_ANALYTICS === "true",
-  maxUploadSize: Number(import.meta.env.VITE_MAX_UPLOAD_SIZE) || 5_000_000,
-  isDev: import.meta.env.DEV,
-  isProd: import.meta.env.PROD,
-};
-
-// Usage in any file
-import { config } from "../config/env";
-
-const response = await fetch(`${config.apiUrl}/posts`);
-```
-
----
-
-## 🔹 Create React App (CRA) — Environment Variables
-
-If using CRA (not Vite), the prefix is `REACT_APP_`:
-
-```bash
-# .env (CRA)
-REACT_APP_API_URL=https://api.example.com
-REACT_APP_NAME=My Store
-```
-
-```jsx
-// Access with process.env (NOT import.meta.env)
-const apiUrl = process.env.REACT_APP_API_URL;
-const appName = process.env.REACT_APP_NAME;
-```
-
----
-
-## 🔹 `.gitignore` — Never Commit Secrets!
-
-```bash
-# .gitignore — add these lines
-.env.local
-.env.*.local
-.env.production    # if it contains real secrets
-```
-
-**Always commit:**
-- `.env.example` — template with fake/empty values showing team what vars are needed
-
-```bash
-# .env.example (commit this to git as a template)
-VITE_API_URL=https://your-api-url.com
-VITE_APP_NAME=Your App Name
-VITE_STRIPE_PUBLIC_KEY=pk_test_your_key_here
-VITE_GOOGLE_MAPS_KEY=your_key_here
-```
-
----
-
-## 🔹 Complete Example — API Configuration
-
-```bash
-# .env
-VITE_API_BASE_URL=https://jsonplaceholder.typicode.com
-VITE_APP_TITLE=My Blog App
-VITE_POSTS_PER_PAGE=10
-VITE_ENABLE_DARK_MODE=true
-```
-
-```jsx
-// src/config/env.js
-export const ENV = {
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
-  appTitle: import.meta.env.VITE_APP_TITLE,
-  postsPerPage: Number(import.meta.env.VITE_POSTS_PER_PAGE),
-  enableDarkMode: import.meta.env.VITE_ENABLE_DARK_MODE === "true",
-};
-
-// Validate required variables at startup
-const required = ["VITE_API_BASE_URL"];
-required.forEach((key) => {
-  if (!import.meta.env[key]) {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
-});
-```
-
-```jsx
-// src/api/client.js
-import { ENV } from "../config/env";
-
-export async function apiGet(path) {
-  const res = await fetch(`${ENV.apiBaseUrl}${path}`);
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
-}
-
-export async function apiPost(path, body) {
-  const res = await fetch(`${ENV.apiBaseUrl}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
-}
-```
-
-```jsx
-// src/App.jsx
-import { useEffect } from "react";
-import { ENV } from "./config/env";
-
-function App() {
-  useEffect(() => {
-    document.title = ENV.appTitle;
-  }, []);
-
-  return (
-    <div>
-      <h1>Welcome to {ENV.appTitle}</h1>
-      {ENV.enableDarkMode && <p>🌙 Dark mode is enabled</p>}
-    </div>
-  );
-}
-```
-
----
-
-## 🔹 Feature Flags with Env Variables
-
-```bash
-# .env.development
-VITE_FEATURE_NEW_DASHBOARD=true
-VITE_FEATURE_AI_SEARCH=false
-
-# .env.production
-VITE_FEATURE_NEW_DASHBOARD=false
-VITE_FEATURE_AI_SEARCH=false
-```
-
-```jsx
-// src/config/features.js
-export const features = {
-  newDashboard: import.meta.env.VITE_FEATURE_NEW_DASHBOARD === "true",
-  aiSearch: import.meta.env.VITE_FEATURE_AI_SEARCH === "true",
-};
-
-// Usage
-import { features } from "../config/features";
-
-function App() {
-  return (
-    <div>
-      {features.newDashboard ? <NewDashboard /> : <OldDashboard />}
-      {features.aiSearch && <AISearchBar />}
-    </div>
-  );
-}
-```
-
----
-
-## 🔹 Environment Variable Checklist
-
-```mermaid
-flowchart TD
-    A[Using an API Key or URL?] --> B[Put in .env file]
-    B --> C{Is it a secret?}
-    C -->|Yes API secret, DB password| D[Never prefix with VITE_!\nKeep server-side only]
-    C -->|No public key, API URL| E[Use VITE_ prefix\nSafe for frontend]
-    E --> F[Add to .gitignore if sensitive]
-    E --> G[Add example to .env.example]
-    D --> H[Use in backend/server only]
-    style D fill:#ff6b6b,color:#fff
+graph TD
+    A[JS Error in Component] --> B{Error Boundary Present?}
+    B -->|No| C[Entire App Crashes 💥]
+    B -->|Yes| D[Only that subtree fails]
+    D --> E[Shows fallback UI ✅]
+    D --> F[Rest of app works fine ✅]
+    style C fill:#ff6b6b,color:#fff
     style E fill:#4caf50,color:#fff
+    style F fill:#4caf50,color:#fff
 ```
-
-> **Critical Rule:** Anything with `VITE_` is **visible in your built JS bundle**. Never put truly secret server-side keys (database passwords, secret API keys) with `VITE_` prefix — anyone can read them from your deployed site!
 
 ---
 
-## 🔹 Common Mistakes ❌
+## 🔹 1. Error Boundaries — Catch Render Errors
+
+### 🧠 What is it?
+
+An **Error Boundary** is a React **class component** that implements `componentDidCatch` and/or `getDerivedStateFromError`. It catches JavaScript errors in its child component tree and shows a fallback UI instead of crashing.
+
+> ⚠️ Error Boundaries **only work as class components** — there is no hook equivalent yet (as of React 18). But you write them once and use everywhere.
+
+---
+
+### 🧩 Basic Error Boundary Class
 
 ```jsx
-// ❌ Undefined — forgot VITE_ prefix
-const key = import.meta.env.API_KEY; // undefined!
+import { Component } from "react";
 
-// ❌ Forgot to restart dev server after changing .env
-// Always restart `npm run dev` after editing .env files!
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
 
-// ❌ Using process.env in Vite
-const url = process.env.REACT_APP_URL; // undefined in Vite!
+  // Called when child throws — update state to show fallback
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
 
-// ❌ Committing secrets to git
-.env.local  // forgot to add to .gitignore
+  // Called after error is caught — good for logging
+  componentDidCatch(error, errorInfo) {
+    console.error("Caught error:", error);
+    console.error("Component stack:", errorInfo.componentStack);
+    // Could send to error reporting service (Sentry, etc.)
+  }
 
-// ✅ Correct
-const key = import.meta.env.VITE_API_KEY;
-const url = import.meta.env.VITE_API_URL;
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          padding: 24,
+          background: "#fff3f3",
+          border: "1px solid #ff6b6b",
+          borderRadius: 8,
+          textAlign: "center",
+        }}>
+          <h3>❌ Something went wrong</h3>
+          <p style={{ color: "#666" }}>{this.state.error?.message}</p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{ marginTop: 8, padding: "8px 16px" }}
+          >
+            🔄 Try Again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default ErrorBoundary;
+```
+
+---
+
+### 📍 Usage — Wrap Any Component
+
+```jsx
+import ErrorBoundary from "./ErrorBoundary";
+
+function App() {
+  return (
+    <div>
+      <h1>My App</h1>
+
+      {/* If UserProfile crashes, only this section shows error */}
+      <ErrorBoundary>
+        <UserProfile />
+      </ErrorBoundary>
+
+      {/* These still work even if UserProfile crashes */}
+      <Footer />
+    </div>
+  );
+}
+```
+
+---
+
+### 📍 Component That Can Crash
+
+```jsx
+function BuggyComponent({ user }) {
+  // This will throw if user is undefined
+  return <div>{user.name.toUpperCase()}</div>;
+}
+
+function App() {
+  const [user, setUser] = useState(null); // null initially!
+
+  return (
+    <div>
+      <h1>App</h1>
+
+      {/* Without boundary — whole app crashes */}
+      {/* <BuggyComponent user={user} /> */}
+
+      {/* With boundary — only this section shows error */}
+      <ErrorBoundary>
+        <BuggyComponent user={user} />
+      </ErrorBoundary>
+
+      <button onClick={() => setUser({ name: "Ali" })}>
+        Load User
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+### 📍 Reusable Error Boundary with Custom Fallback
+
+```jsx
+import { Component } from "react";
+
+class ErrorBoundary extends Component {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, info) {
+    if (this.props.onError) {
+      this.props.onError(error, info);
+    }
+  }
+
+  reset = () => {
+    this.setState({ hasError: false, error: null });
+    if (this.props.onReset) this.props.onReset();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      // Use custom fallback if provided, otherwise default
+      if (this.props.fallback) {
+        return this.props.fallback(this.state.error, this.reset);
+      }
+
+      return (
+        <div style={{ padding: 20, textAlign: "center" }}>
+          <p>Something went wrong.</p>
+          <button onClick={this.reset}>Try Again</button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Usage with custom fallback
+function App() {
+  return (
+    <ErrorBoundary
+      fallback={(error, reset) => (
+        <div style={{ padding: 24, background: "#fff3f3", borderRadius: 8 }}>
+          <h3>🔴 Page Error</h3>
+          <code>{error.message}</code>
+          <br />
+          <button onClick={reset} style={{ marginTop: 12 }}>
+            Reload Component
+          </button>
+        </div>
+      )}
+      onError={(err) => console.log("Logged:", err)}
+    >
+      <SomeHeavyPage />
+    </ErrorBoundary>
+  );
+}
+```
+
+---
+
+## 🔹 2. What Errors Do NOT Get Caught?
+
+Error boundaries do **not** catch:
+
+| Scenario | Caught? | Solution |
+|----------|---------|----------|
+| Errors in render | ✅ Yes | Error Boundary |
+| Errors in `componentDidMount` | ✅ Yes | Error Boundary |
+| Errors in event handlers | ❌ No | try/catch in handler |
+| Async errors (setTimeout, fetch) | ❌ No | try/catch + state |
+| Errors in the Error Boundary itself | ❌ No | Another Error Boundary |
+
+```jsx
+// ❌ Error in event handler — NOT caught by ErrorBoundary
+function Button() {
+  const handleClick = () => {
+    throw new Error("Click error!"); // NOT caught!
+  };
+  return <button onClick={handleClick}>Click</button>;
+}
+
+// ✅ Must handle manually
+function Button() {
+  const handleClick = () => {
+    try {
+      throw new Error("Click error!");
+    } catch (err) {
+      console.error(err);
+      // Show error in state
+    }
+  };
+  return <button onClick={handleClick}>Click</button>;
+}
+```
+
+---
+
+## 🔹 3. Placement Strategy
+
+```mermaid
+graph TD
+    A[App Root] --> B[ErrorBoundary - Top Level]
+    B --> C[Navbar]
+    B --> D[ErrorBoundary - Main Content]
+    D --> E[ErrorBoundary - User Profile]
+    D --> F[ErrorBoundary - Products List]
+    D --> G[ErrorBoundary - Shopping Cart]
+
+    style B fill:#ff9800,color:#fff
+    style D fill:#ff9800,color:#fff
+    style E fill:#2196f3,color:#fff
+    style F fill:#2196f3,color:#fff
+    style G fill:#2196f3,color:#fff
+```
+
+**Strategy:** Put Error Boundaries at the right granularity:
+- **Too few:** One error crashes large sections
+- **Too many:** Complex and hard to maintain
+- **Sweet spot:** Wrap independent sections (sidebar, main content, widgets)
+
+---
+
+## 🔹 4. react-error-boundary Package
+
+The `react-error-boundary` package provides a ready-made Error Boundary with helpful features:
+
+```bash
+npm install react-error-boundary
+```
+
+```jsx
+import { ErrorBoundary } from "react-error-boundary";
+
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <div style={{ padding: 20, background: "#fff3f3", borderRadius: 8 }}>
+      <h3>❌ Error occurred!</h3>
+      <pre style={{ color: "red", fontSize: 14 }}>{error.message}</pre>
+      <button onClick={resetErrorBoundary}>🔄 Try Again</button>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onError={(error) => console.log("Error logged:", error)}
+      onReset={() => console.log("Component reset!")}
+    >
+      <UserDashboard />
+    </ErrorBoundary>
+  );
+}
+```
+
+---
+
+## 🔹 5. Suspense for Async Data (React 18+)
+
+`Suspense` can now work with **data fetching** — not just lazy loading. A component can "suspend" (pause rendering) while data loads, and Suspense shows the fallback.
+
+> This pattern works natively with **React Query / TanStack Query** and custom Suspense-enabled data sources.
+
+---
+
+### 📍 Suspense + React Query (Preview)
+
+```jsx
+import { Suspense } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+function UserProfile({ userId }) {
+  // suspense: true makes this component suspend while loading
+  const { data: user } = useQuery({
+    queryKey: ["user", userId],
+    queryFn: () => fetch(`/api/users/${userId}`).then(r => r.json()),
+    suspense: true, // enables Suspense integration
+  });
+
+  return (
+    <div>
+      <h2>{user.name}</h2>
+      <p>{user.email}</p>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    // Error Boundary catches data errors
+    // Suspense shows loading while data fetches
+    <ErrorBoundary fallback={<ErrorFallback />}>
+      <Suspense fallback={<div>Loading user...</div>}>
+        <UserProfile userId={1} />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+```
+
+---
+
+## 🔹 6. Complete Error Handling Setup
+
+```jsx
+import { Component, Suspense, lazy, useState } from "react";
+import { ErrorBoundary } from "react-error-boundary";
+
+// Lazy loaded pages
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+
+// Error fallback
+function PageError({ error, resetErrorBoundary }) {
+  return (
+    <div style={{
+      minHeight: "50vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 16,
+    }}>
+      <div style={{ fontSize: 48 }}>💔</div>
+      <h2>Something went wrong</h2>
+      <p style={{ color: "#666", maxWidth: 400, textAlign: "center" }}>
+        {error.message || "An unexpected error occurred. Please try again."}
+      </p>
+      <button
+        onClick={resetErrorBoundary}
+        style={{
+          padding: "10px 24px",
+          background: "#2196f3",
+          color: "#fff",
+          border: "none",
+          borderRadius: 4,
+          cursor: "pointer",
+        }}
+      >
+        🔄 Try Again
+      </button>
+    </div>
+  );
+}
+
+// Loading spinner
+function Spinner() {
+  return (
+    <div style={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      height: "50vh",
+    }}>
+      <div style={{
+        width: 48,
+        height: 48,
+        borderRadius: "50%",
+        border: "4px solid #e0e0e0",
+        borderTop: "4px solid #2196f3",
+        animation: "spin 0.8s linear infinite",
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+function App() {
+  const [page, setPage] = useState("dashboard");
+
+  return (
+    <div>
+      <nav style={{ padding: 16, background: "#1a237e", display: "flex", gap: 12 }}>
+        {["dashboard", "profile"].map((p) => (
+          <button
+            key={p}
+            onClick={() => setPage(p)}
+            style={{
+              padding: "6px 16px",
+              background: page === p ? "#fff" : "transparent",
+              color: page === p ? "#1a237e" : "#fff",
+              border: "1px solid #fff",
+              borderRadius: 4,
+              cursor: "pointer",
+              textTransform: "capitalize",
+            }}
+          >
+            {p}
+          </button>
+        ))}
+      </nav>
+
+      <ErrorBoundary
+        FallbackComponent={PageError}
+        resetKeys={[page]}
+        onError={(err) => console.error("App error:", err)}
+      >
+        <Suspense fallback={<Spinner />}>
+          {page === "dashboard" ? <Dashboard /> : <UserProfile />}
+        </Suspense>
+      </ErrorBoundary>
+    </div>
+  );
+}
+
+export default App;
 ```
 
 ---
 
 ## 🎯 Interview Questions
 
-**Q1: What is the difference between `.env`, `.env.local`, and `.env.production`?**
+**Q1: Why are Error Boundaries class components?**
 
-> `.env` applies to all environments. `.env.local` is for personal/local overrides and should not be committed. `.env.production` applies only when running `npm run build` (production build).
+> Error boundaries use lifecycle methods (`getDerivedStateFromError`, `componentDidCatch`) which don't have hook equivalents. The React team hasn't added hook-based alternatives yet, but libraries like `react-error-boundary` wrap the class for you.
 
-**Q2: Why must Vite variables start with `VITE_`?**
+**Q2: What's the difference between `getDerivedStateFromError` and `componentDidCatch`?**
 
-> For security — Vite only exposes variables prefixed with `VITE_` to the client-side bundle. Without this, any `.env` variable (including backend secrets) could accidentally be exposed in the browser.
+> `getDerivedStateFromError` is a static method used to **update state** to show the fallback UI (called during rendering). `componentDidCatch` is called **after** the error for **side effects** like logging.
 
-**Q3: Are environment variables in React truly secure?**
+**Q3: Can an error boundary catch errors in async functions?**
 
-> No! Variables with `VITE_` (or `REACT_APP_`) are embedded in the JavaScript bundle and visible to anyone. Only use them for **public** keys (publishable Stripe keys, public API URLs). Never put private API keys, database passwords, or JWT secrets in frontend env vars.
+> No. Error boundaries only catch errors that occur during **rendering, lifecycle methods, and constructors**. Async errors (in `setTimeout`, Promises, event handlers) must be caught with `try/catch`.
 
-**Q4: How do you use different API URLs for development and production?**
+**Q4: What happens when multiple components throw errors simultaneously?**
 
-> Create `.env.development` with `VITE_API_URL=http://localhost:4000` and `.env.production` with `VITE_API_URL=https://api.mysite.com`. Vite automatically loads the right file based on the build mode.
+> Each component's error is caught by its **nearest ancestor** Error Boundary. If they share the same boundary, the first error caught will trigger the fallback.
 
 ---
 
 ## 🏠 Home Task
 
-Set up a proper environment configuration:
-1. Create `.env`, `.env.development`, `.env.production` files
-2. Move all hardcoded API URLs to env variables
-3. Create `src/config/env.js` with all variables centralized
-4. Add validation that throws if required variables are missing
-5. Create `.env.example` file showing all required variables
-6. Add `.env.local` to `.gitignore`
-7. Add a "version" badge: `VITE_APP_VERSION=1.0.0` shown in footer
+Build a **Dashboard with Error Handling**:
+1. 4 widgets: User Info, Recent Orders, Stats, Notifications
+2. Each widget wrapped in its own `ErrorBoundary`
+3. A "Crash Widget" button on each card to simulate errors
+4. Reset button in error fallback to recover
+5. Wrap all lazy-loaded pages with both `Suspense` and `ErrorBoundary`
+6. Log errors to console in `componentDidCatch`

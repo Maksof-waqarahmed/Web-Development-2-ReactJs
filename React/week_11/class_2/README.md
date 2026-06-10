@@ -1,346 +1,268 @@
-# 🔄 TanStack Query — Part 2
+# 🔀 Code Splitting, Lazy Loading & Suspense
 
 ## 📚 Topics Covered
-- `useMutation` — POST, PUT, DELETE operations
-- `onSuccess`, `onError`, `onSettled` callbacks
-- Cache invalidation with `invalidateQueries`
-- Manual cache update with `setQueryData`
-- Optimistic updates — instant UI with rollback on error
-- `keepPreviousData` for smooth pagination transitions
-- `useInfiniteQuery` — infinite scroll pattern
-- `getNextPageParam` and `hasNextPage`
-- Complete CRUD architecture with custom hooks
-- Project: Product Manager with full CRUD
+- Why code splitting matters — bundle size and load time
+- Dynamic `import()` — the foundation of lazy loading
+- `React.lazy()` — lazy load components on demand
+- `Suspense` — show fallback UI while component loads
+- Route-based code splitting with React Router
+- Multiple `Suspense` boundaries — granular loading states
+- Lazy loading on user action (modals, heavy widgets)
+- Prefetching on hover
+- Vite bundle analysis with `rollup-plugin-visualizer`
+- Common mistakes with `React.lazy()`
 
 ---
 
-## `useMutation`, Pagination, Infinite Scroll, Cache Management, Optimistic Updates
+## `React.lazy()`, `Suspense`, Dynamic Imports
 
 ---
 
-## 🔹 Quick Recap — Part 1
+## 🔹 Why Code Splitting?
 
-| Concept | What it does |
-|---------|-------------|
-| `QueryClient` | Holds the cache for the whole app |
-| `QueryClientProvider` | Provides cache to all components |
-| `useQuery` | Fetches + caches data |
-| `queryKey` | Unique cache identifier |
-| `staleTime` | How long data stays fresh |
+By default, React bundles **all your JavaScript** into one large file. When a user visits your app, their browser downloads **everything** — even pages they might never visit.
+
+```mermaid
+graph TD
+    subgraph "Without Code Splitting"
+        A[app.bundle.js 2MB] --> B[User downloads EVERYTHING]
+        B --> C[Slow initial load 😫]
+    end
+
+    subgraph "With Code Splitting"
+        D[main.bundle.js 200KB] --> E[User downloads core]
+        F[about.chunk.js 50KB] --> G[Downloaded when user visits /about]
+        H[products.chunk.js 100KB] --> I[Downloaded when user visits /products]
+    end
+    style C fill:#ff6b6b,color:#fff
+    style E fill:#4caf50,color:#fff
+```
+
+**Code Splitting** = split your app into smaller chunks, load them **on demand**.
 
 ---
 
-## 🔹 1. `useMutation` — Create, Update, Delete
+## 🔹 1. Dynamic `import()` — The Foundation
 
-`useQuery` is for **reading** data (GET). `useMutation` is for **writing** data (POST, PUT, PATCH, DELETE).
+JavaScript's `import()` function loads a module **asynchronously** at runtime.
+
+```jsx
+// Static import (loaded at startup — always)
+import HeavyComponent from "./HeavyComponent";
+
+// Dynamic import (loaded on demand — lazy!)
+const HeavyComponent = await import("./HeavyComponent");
+```
+
+---
+
+## 🔹 2. `React.lazy()` — Lazy Load Components
+
+### 🧠 What is it?
+
+`React.lazy()` takes a function that calls `import()` and returns a **lazy component** that only loads its code when it's first rendered.
 
 ### 🧩 Syntax
 
 ```jsx
-const mutation = useMutation({
-  mutationFn: (newData) => postData(newData),
-  onSuccess: (data) => { /* runs after success */ },
-  onError: (error) => { /* runs after failure */ },
-  onSettled: () => { /* runs after success OR failure */ },
-});
-
-// Trigger the mutation
-mutation.mutate(payload);
+const LazyComponent = React.lazy(() => import("./MyComponent"));
 ```
 
 ---
 
-### 📍 Example 1: Create a Post
+### 🔹 3. `Suspense` — Show Fallback While Loading
+
+`Suspense` wraps lazy components and shows a **fallback UI** while the component is loading.
 
 ```jsx
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { Suspense } from "react";
 
-async function createPost(newPost) {
-  const res = await fetch("https://jsonplaceholder.typicode.com/posts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(newPost),
-  });
-  if (!res.ok) throw new Error("Failed to create post");
-  return res.json();
+<Suspense fallback={<div>Loading...</div>}>
+  <LazyComponent />
+</Suspense>
+```
+
+---
+
+### 📍 Basic Example
+
+```jsx
+import { lazy, Suspense } from "react";
+
+// ❌ Old way — always loaded
+// import HeavyChart from "./HeavyChart";
+
+// ✅ New way — loaded only when needed
+const HeavyChart = lazy(() => import("./HeavyChart"));
+
+function Dashboard() {
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <Suspense fallback={<div>📊 Loading chart...</div>}>
+        <HeavyChart />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+---
+
+## 🔹 4. Lazy Loading with React Router
+
+The most common use case — lazy load entire pages/routes:
+
+```jsx
+import { lazy, Suspense } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+// Each page is a separate chunk — loaded when user navigates there
+const Home = lazy(() => import("./pages/Home"));
+const About = lazy(() => import("./pages/About"));
+const Products = lazy(() => import("./pages/Products"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const Contact = lazy(() => import("./pages/Contact"));
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Suspense
+        fallback={
+          <div style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+            fontSize: 18,
+          }}>
+            ⏳ Loading page...
+          </div>
+        }
+      >
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/products/:id" element={<ProductDetail />} />
+          <Route path="/contact" element={<Contact />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
 }
 
-function CreatePostForm() {
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const queryClient = useQueryClient();
+export default App;
+```
 
-  const createMutation = useMutation({
-    mutationFn: createPost,
+---
 
-    // After success — refresh the posts list
-    onSuccess: (newPost) => {
-      console.log("Created:", newPost);
+## 🔹 5. Custom Loading Spinner
 
-      // Invalidate cache — force a fresh fetch of posts list
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
+```jsx
+function PageLoader() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "50vh",
+        gap: 16,
+      }}
+    >
+      <div
+        style={{
+          width: 48,
+          height: 48,
+          border: "4px solid #e0e0e0",
+          borderTop: "4px solid #2196f3",
+          borderRadius: "50%",
+          animation: "spin 0.8s linear infinite",
+        }}
+      />
+      <p style={{ color: "#666" }}>Loading...</p>
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
 
-      setTitle("");
-      setBody("");
-    },
+// Usage
+<Suspense fallback={<PageLoader />}>
+  <LazyComponent />
+</Suspense>
+```
 
-    onError: (error) => {
-      console.error("Error:", error.message);
-    },
-  });
+---
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    createMutation.mutate({ title, body, userId: 1 });
-  };
+## 🔹 6. Multiple Suspense Boundaries
+
+You can have **nested Suspense** boundaries — each showing its own fallback:
+
+```jsx
+function App() {
+  return (
+    <div>
+      {/* Page-level suspense */}
+      <Suspense fallback={<PageLoader />}>
+        <Routes>...</Routes>
+      </Suspense>
+    </div>
+  );
+}
+
+function ProductPage() {
+  const Reviews = lazy(() => import("./Reviews"));
+  const RecommendedProducts = lazy(() => import("./RecommendedProducts"));
 
   return (
-    <form onSubmit={handleSubmit} style={{ padding: 20 }}>
-      <h3>Create Post</h3>
+    <div>
+      <h1>Product Details</h1>
 
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Title"
-        style={{ display: "block", width: "100%", padding: 8, marginBottom: 8 }}
-        required
-      />
+      {/* Component-level suspense */}
+      <Suspense fallback={<div>Loading reviews...</div>}>
+        <Reviews />
+      </Suspense>
 
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Content"
-        style={{ display: "block", width: "100%", padding: 8, marginBottom: 8, height: 80 }}
-        required
-      />
+      <Suspense fallback={<div>Loading recommendations...</div>}>
+        <RecommendedProducts />
+      </Suspense>
+    </div>
+  );
+}
+```
 
-      <button
-        type="submit"
-        disabled={createMutation.isPending}
-        style={{
-          padding: "8px 20px",
-          background: createMutation.isPending ? "#ccc" : "#2196f3",
-          color: "#fff",
-          border: "none",
-          borderRadius: 4,
-          cursor: createMutation.isPending ? "not-allowed" : "pointer",
-        }}
-      >
-        {createMutation.isPending ? "Creating..." : "Create Post"}
+---
+
+## 🔹 7. Lazy Loading on User Action
+
+Load heavy components only when user clicks a button:
+
+```jsx
+import { lazy, Suspense, useState } from "react";
+
+const HeavyModal = lazy(() => import("./HeavyModal"));
+
+function App() {
+  const [showModal, setShowModal] = useState(false);
+
+  return (
+    <div>
+      <button onClick={() => setShowModal(true)}>
+        Open Heavy Modal
       </button>
 
-      {createMutation.isError && (
-        <p style={{ color: "red" }}>❌ {createMutation.error.message}</p>
+      {/* Component only loads when showModal becomes true */}
+      {showModal && (
+        <Suspense fallback={<div>Loading modal...</div>}>
+          <HeavyModal onClose={() => setShowModal(false)} />
+        </Suspense>
       )}
-      {createMutation.isSuccess && (
-        <p style={{ color: "green" }}>✅ Post created!</p>
-      )}
-    </form>
-  );
-}
-```
-
----
-
-### 📍 Example 2: Delete with Confirmation
-
-```jsx
-function DeleteButton({ postId }) {
-  const queryClient = useQueryClient();
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      const res = await fetch(`https://jsonplaceholder.typicode.com/posts/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Delete failed");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-    },
-  });
-
-  return (
-    <button
-      onClick={() => {
-        if (window.confirm("Delete this post?")) {
-          deleteMutation.mutate(postId);
-        }
-      }}
-      disabled={deleteMutation.isPending}
-      style={{ color: "red", background: "none", border: "1px solid red", borderRadius: 4, padding: "4px 8px", cursor: "pointer" }}
-    >
-      {deleteMutation.isPending ? "Deleting..." : "🗑️ Delete"}
-    </button>
-  );
-}
-```
-
----
-
-## 🔹 2. Cache Invalidation vs Manual Update
-
-### invalidateQueries — Refetch After Mutation
-
-```jsx
-// After creating/updating/deleting — tell React Query to refetch
-queryClient.invalidateQueries({ queryKey: ["posts"] });
-
-// Invalidate everything starting with "posts"
-queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
-```
-
-### setQueryData — Update Cache Manually (No Refetch)
-
-```jsx
-const queryClient = useQueryClient();
-
-// Directly update the cache with new data
-queryClient.setQueryData(["posts"], (oldPosts) => {
-  return [...oldPosts, newPost];
-});
-```
-
----
-
-## 🔹 3. Optimistic Updates — Instant UI Feedback
-
-Update the UI **before** the server responds, then roll back if it fails.
-
-```jsx
-function ToggleLike({ post }) {
-  const queryClient = useQueryClient();
-
-  const likeMutation = useMutation({
-    mutationFn: (post) =>
-      fetch(`/api/posts/${post.id}/like`, { method: "POST" }).then(r => r.json()),
-
-    // Before request — optimistically update
-    onMutate: async (targetPost) => {
-      // Cancel any in-progress refetches to avoid overwriting
-      await queryClient.cancelQueries({ queryKey: ["posts"] });
-
-      // Snapshot the previous value (for rollback)
-      const previousPosts = queryClient.getQueryData(["posts"]);
-
-      // Optimistically update cache
-      queryClient.setQueryData(["posts"], (old) =>
-        old.map((p) =>
-          p.id === targetPost.id
-            ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 }
-            : p
-        )
-      );
-
-      // Return context with snapshot
-      return { previousPosts };
-    },
-
-    // If mutation fails — rollback to snapshot
-    onError: (err, variables, context) => {
-      queryClient.setQueryData(["posts"], context.previousPosts);
-      alert("Failed to update like. Rolled back.");
-    },
-
-    // Always refetch after settle
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-    },
-  });
-
-  return (
-    <button
-      onClick={() => likeMutation.mutate(post)}
-      style={{ color: post.liked ? "red" : "#666" }}
-    >
-      {post.liked ? "❤️" : "🤍"} {post.likes}
-    </button>
-  );
-}
-```
-
----
-
-## 🔹 4. Pagination
-
-```jsx
-import { useState } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
-
-async function fetchPosts(page) {
-  const res = await fetch(
-    `https://jsonplaceholder.typicode.com/posts?_page=${page}&_limit=5`
-  );
-  const data = await res.json();
-  const totalCount = res.headers.get("X-Total-Count"); // from JSONPlaceholder
-  return { posts: data, total: Number(totalCount) };
-}
-
-function PaginatedPosts() {
-  const [page, setPage] = useState(1);
-  const limit = 5;
-
-  const { data, isLoading, isError, isFetching } = useQuery({
-    queryKey: ["posts", page],
-    queryFn: () => fetchPosts(page),
-    placeholderData: keepPreviousData, // Keep old data while fetching new page
-  });
-
-  const totalPages = data ? Math.ceil(data.total / limit) : 0;
-
-  if (isLoading) return <div>⏳ Loading...</div>;
-  if (isError) return <div>❌ Error loading posts</div>;
-
-  return (
-    <div style={{ maxWidth: 600, margin: "0 auto", padding: 20 }}>
-      <h2>Posts {isFetching && "🔄"}</h2>
-
-      {data.posts.map((post) => (
-        <div key={post.id} style={{ padding: 12, borderBottom: "1px solid #eee" }}>
-          <strong>{post.title}</strong>
-          <p style={{ color: "#666", fontSize: 14 }}>{post.body.slice(0, 80)}...</p>
-        </div>
-      ))}
-
-      {/* Pagination Controls */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 20 }}>
-        <button
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1}
-          style={{ padding: "6px 12px" }}
-        >
-          ← Prev
-        </button>
-
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-          <button
-            key={p}
-            onClick={() => setPage(p)}
-            style={{
-              padding: "6px 12px",
-              background: page === p ? "#2196f3" : "#eee",
-              color: page === p ? "#fff" : "#333",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-            }}
-          >
-            {p}
-          </button>
-        ))}
-
-        <button
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          disabled={page === totalPages}
-          style={{ padding: "6px 12px" }}
-        >
-          Next →
-        </button>
-      </div>
-      <p style={{ textAlign: "center", color: "#999", marginTop: 8 }}>
-        Page {page} of {totalPages}
-      </p>
     </div>
   );
 }
@@ -348,207 +270,215 @@ function PaginatedPosts() {
 
 ---
 
-## 🔹 5. Infinite Scroll — `useInfiniteQuery`
+## 🔹 8. Prefetching — Load Before User Clicks
 
 ```jsx
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { useCallback, useRef } from "react";
-
-async function fetchPosts({ pageParam = 1 }) {
-  const res = await fetch(
-    `https://jsonplaceholder.typicode.com/posts?_page=${pageParam}&_limit=10`
-  );
-  const posts = await res.json();
-  return {
-    posts,
-    nextPage: posts.length === 10 ? pageParam + 1 : undefined,
+// Prefetch on hover — user hasn't clicked yet but we start loading
+function NavLink({ to, children }) {
+  const handleMouseEnter = () => {
+    // Trigger the import early
+    import(`./pages/${to}`);
   };
-}
-
-function InfinitePostList() {
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery({
-    queryKey: ["posts-infinite"],
-    queryFn: fetchPosts,
-    getNextPageParam: (lastPage) => lastPage.nextPage,
-    initialPageParam: 1,
-  });
-
-  // Intersection Observer for auto-load
-  const observer = useRef(null);
-  const lastPostRef = useCallback((node) => {
-    if (isFetchingNextPage) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasNextPage) {
-        fetchNextPage();
-      }
-    });
-    if (node) observer.current.observe(node);
-  }, [isFetchingNextPage, hasNextPage, fetchNextPage]);
-
-  if (isLoading) return <div style={{ padding: 20 }}>⏳ Loading...</div>;
-
-  const allPosts = data?.pages.flatMap((page) => page.posts) ?? [];
 
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto", padding: 20 }}>
-      <h2>📝 Posts (Infinite Scroll)</h2>
+    <Link to={`/${to}`} onMouseEnter={handleMouseEnter}>
+      {children}
+    </Link>
+  );
+}
 
-      {allPosts.map((post, index) => {
-        const isLast = index === allPosts.length - 1;
-        return (
-          <div
-            key={post.id}
-            ref={isLast ? lastPostRef : null}
-            style={{ padding: 12, borderBottom: "1px solid #eee" }}
-          >
-            <strong>#{post.id} {post.title}</strong>
-            <p style={{ color: "#666", fontSize: 14 }}>
-              {post.body.slice(0, 100)}...
-            </p>
-          </div>
-        );
-      })}
+// Usage
+<NavLink to="about">About</NavLink>
+// When user hovers → About page starts loading
+// When user clicks → Already loaded!
+```
 
-      {isFetchingNextPage && (
-        <div style={{ textAlign: "center", padding: 20, color: "#999" }}>
-          ⏳ Loading more...
-        </div>
-      )}
+---
 
-      {!hasNextPage && (
-        <div style={{ textAlign: "center", padding: 20, color: "#999" }}>
-          ✅ All posts loaded!
-        </div>
-      )}
+## 🔹 9. Complete App with Lazy Loading
+
+```jsx
+// src/App.jsx
+import { lazy, Suspense } from "react";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+
+const Home = lazy(() => import("./pages/Home"));
+const Shop = lazy(() => import("./pages/Shop"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Profile = lazy(() => import("./pages/Profile"));
+
+function Navbar() {
+  return (
+    <nav style={{
+      background: "#1a1a2e",
+      padding: "12px 24px",
+      display: "flex",
+      gap: 24,
+    }}>
+      {[
+        { to: "/", label: "🏠 Home" },
+        { to: "/shop", label: "🛍️ Shop" },
+        { to: "/cart", label: "🛒 Cart" },
+        { to: "/profile", label: "👤 Profile" },
+      ].map(({ to, label }) => (
+        <Link
+          key={to}
+          to={to}
+          style={{ color: "#fff", textDecoration: "none" }}
+        >
+          {label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+function LoadingPage() {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "calc(100vh - 50px)",
+      fontSize: 24,
+      color: "#666",
+    }}>
+      ⏳ Loading...
     </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Navbar />
+      <Suspense fallback={<LoadingPage />}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/profile" element={<Profile />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+```
+
+---
+
+## 🔹 10. Vite Bundle Analysis — See Your Chunks
+
+```bash
+# Install visualizer plugin
+npm install --save-dev rollup-plugin-visualizer
+
+# vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { visualizer } from 'rollup-plugin-visualizer'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    visualizer({ open: true })  // Opens bundle analysis after build
+  ],
+})
+
+# Build and see analysis
+npm run build
+```
+
+This opens a visual treemap showing which chunks are large.
+
+---
+
+## 🔹 Common Mistakes ❌
+
+### 1. Defining lazy components inside a component
+
+```jsx
+// ❌ Wrong — creates new lazy component on every render!
+function App() {
+  const LazyComp = lazy(() => import("./LazyComp")); // BAD!
+  return <LazyComp />;
+}
+
+// ✅ Correct — define outside the component
+const LazyComp = lazy(() => import("./LazyComp"));
+function App() {
+  return <LazyComp />;
+}
+```
+
+### 2. No Suspense boundary
+
+```jsx
+// ❌ Wrong — lazy component with no Suspense
+const LazyComp = lazy(() => import("./LazyComp"));
+function App() {
+  return <LazyComp />; // Throws error!
+}
+
+// ✅ Must wrap with Suspense
+function App() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LazyComp />
+    </Suspense>
   );
 }
 ```
 
 ---
 
-## 🔹 6. Complete CRUD App
-
-```jsx
-// hooks/usePosts.js
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-const API = "https://jsonplaceholder.typicode.com/posts";
-
-// Queries
-export const usePosts = () =>
-  useQuery({
-    queryKey: ["posts"],
-    queryFn: () => fetch(`${API}?_limit=10`).then(r => r.json()),
-  });
-
-export const usePost = (id) =>
-  useQuery({
-    queryKey: ["post", id],
-    queryFn: () => fetch(`${API}/${id}`).then(r => r.json()),
-    enabled: !!id,
-  });
-
-// Mutations
-export const useCreatePost = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (post) =>
-      fetch(API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(post),
-      }).then(r => r.json()),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts"] }),
-  });
-};
-
-export const useUpdatePost = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, ...post }) =>
-      fetch(`${API}/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(post),
-      }).then(r => r.json()),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.setQueryData(["post", data.id], data);
-    },
-  });
-};
-
-export const useDeletePost = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id) =>
-      fetch(`${API}/${id}`, { method: "DELETE" }).then(r => r.json()),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts"] }),
-  });
-};
-```
-
----
-
-## 🔹 TanStack Query Flow Diagram
+## 🔹 Summary
 
 ```mermaid
-sequenceDiagram
-    participant UI
-    participant Cache
-    participant Server
+flowchart TD
+    A[Large App Bundle] --> B[Code Splitting]
+    B --> C[dynamic import]
+    C --> D[React.lazy]
+    D --> E[Wrap with Suspense]
+    E --> F[Smaller initial load ✅]
+    E --> G[Pages load on demand ✅]
+    E --> H[Better user experience ✅]
 
-    UI->>Cache: useQuery(["posts"])
-    Cache->>Server: No cache — fetch GET /posts
-    Server-->>Cache: Posts data
-    Cache-->>UI: isSuccess, data ✅
-
-    UI->>Cache: useMutation — create post
-    Cache->>Server: POST /posts
-    Server-->>Cache: New post
-    Cache->>Cache: invalidateQueries(["posts"])
-    Cache->>Server: Refetch GET /posts
-    Server-->>Cache: Updated posts
-    Cache-->>UI: Updated list ✅
+    style F fill:#4caf50,color:#fff
+    style G fill:#4caf50,color:#fff
+    style H fill:#4caf50,color:#fff
 ```
 
 ---
 
 ## 🎯 Interview Questions
 
-**Q1: When would you use `useMutation` instead of `useQuery`?**
+**Q1: What is code splitting?**
 
-> `useMutation` is for side effects that change server data (POST, PUT, DELETE). It doesn't run automatically — you call `mutation.mutate(data)` explicitly.
+> Breaking the app bundle into smaller chunks that are loaded **on demand** instead of all at once. This reduces initial load time.
 
-**Q2: What is the difference between `invalidateQueries` and `setQueryData`?**
+**Q2: What does `React.lazy()` require?**
 
-> `invalidateQueries` marks data as stale and triggers a background refetch. `setQueryData` directly updates the cache with provided data — no server request. Use `setQueryData` for optimistic updates; use `invalidateQueries` when you trust the server to have the correct data.
+> It requires the component to be the **default export** of the module. Named exports won't work directly.
 
-**Q3: What are optimistic updates and why use them?**
+**Q3: What happens if no Suspense boundary is found?**
 
-> Optimistic updates immediately update the UI assuming the server will succeed, then roll back if it fails. This makes the app feel instant and responsive instead of waiting for round-trip latency.
+> React throws an error. Every `lazy` component must be inside a `Suspense` boundary somewhere in its ancestor tree.
 
-**Q4: How does `useInfiniteQuery` differ from `useQuery`?**
+**Q4: Can you use lazy loading for non-component modules?**
 
-> `useInfiniteQuery` stores data in **pages** (an array of results). You call `fetchNextPage()` to load more, and `hasNextPage` tells you if more exists. Perfect for "Load More" or infinite scroll patterns.
+> The dynamic `import()` function can load any module, but `React.lazy()` specifically is for React components. For data/utility lazy loading, use `import()` directly in `useEffect` or event handlers.
 
 ---
 
 ## 🏠 Home Task
 
-Build a complete **Product Manager** app:
-1. List products with pagination (10 per page)
-2. Create new product form (useMutation POST)
-3. Edit product inline (useMutation PUT)
-4. Delete product with confirmation (useMutation DELETE)
-5. Optimistic delete — remove from UI immediately, rollback on error
-6. Search products — use `enabled: !!searchQuery`
-7. Open DevTools and observe cache entries for each query key
+Build a **Multi-page App** with code splitting:
+1. 4+ pages: Home, Products, Cart, Dashboard
+2. All pages lazily loaded with `React.lazy()`
+3. Global Suspense with a nice spinner
+4. Prefetch next page on nav link hover
+5. Conditional component: heavy modal/chart only loads when user opens it
+6. Check Network tab in DevTools to confirm separate chunks are loading

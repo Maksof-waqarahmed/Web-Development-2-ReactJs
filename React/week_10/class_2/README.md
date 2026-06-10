@@ -1,598 +1,550 @@
-# 🧩 React Component Patterns
+# ⚛️ Advanced React Hooks
 
 ## 📚 Topics Covered
-- Higher Order Components (HOC) — wrap and enhance components
-- `withLoading`, `withAuth`, `withLogger` HOC examples
-- HOC caveats — displayName, props forwarding
-- Render Props pattern — flexible rendering with shared logic
-- Children as function pattern
-- Compound Components — grouped UI sharing implicit state via Context
-- Custom Select component with compound pattern
-- Accordion compound component example
-- When to use HOC vs Render Props vs Compound Components vs Custom Hooks
+- `useLayoutEffect` — synchronous DOM measurement before paint
+- `useLayoutEffect` vs `useEffect` — when to use each
+- `forwardRef` — passing refs through to child DOM elements
+- `useImperativeHandle` — expose custom methods to parent via ref
+- `useId` — generating unique stable IDs for accessibility
+- Project: Custom Modal with ref-based `open()` / `close()` API
 
 ---
 
-## HOC, Render Props, Compound Components, forwardRef
+## `useLayoutEffect`, `useImperativeHandle`, `forwardRef`, `useId`
 
 ---
 
-## 🔹 Why Patterns?
+## 🔹 1. `useLayoutEffect` — Synchronous DOM Measurement
 
-As apps grow, you need ways to **share logic and behavior** between components without repeating code. These patterns are the classic solutions — still used in many real-world codebases and libraries.
+### 🧠 What is it?
+
+`useLayoutEffect` works exactly like `useEffect` but fires **synchronously after DOM mutations** and **before the browser paints** the screen.
+
+```mermaid
+sequenceDiagram
+    participant React
+    participant DOM
+    participant Browser
+    React->>DOM: Update DOM
+    React->>React: Run useLayoutEffect (sync)
+    React->>Browser: Paint Screen
+    React->>React: Run useEffect (async)
+```
+
+---
+
+### 🔍 useEffect vs useLayoutEffect
+
+| Feature | `useEffect` | `useLayoutEffect` |
+|---------|------------|-------------------|
+| Timing | After paint | Before paint (sync) |
+| Blocks paint? | No | Yes |
+| Use for | API calls, subscriptions | DOM measurements, animations |
+| Performance | Better (async) | Can be slower if overused |
+
+---
+
+### 📍 Example 1: Measuring DOM Element Size
+
+```jsx
+import { useLayoutEffect, useRef, useState } from "react";
+
+function MeasureBox() {
+  const boxRef = useRef(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  // Must use useLayoutEffect — we need size BEFORE paint
+  useLayoutEffect(() => {
+    const { width, height } = boxRef.current.getBoundingClientRect();
+    setSize({ width, height });
+  }, []);
+
+  return (
+    <div>
+      <div
+        ref={boxRef}
+        style={{
+          width: "50%",
+          padding: 20,
+          background: "#e3f2fd",
+          borderRadius: 8,
+        }}
+      >
+        This box is being measured!
+      </div>
+      <p>
+        Width: {Math.round(size.width)}px | Height: {Math.round(size.height)}px
+      </p>
+    </div>
+  );
+}
+```
+
+---
+
+### 📍 Example 2: Tooltip Positioning (No Flicker)
+
+```jsx
+import { useLayoutEffect, useRef, useState } from "react";
+
+function Tooltip({ targetRef, text }) {
+  const tooltipRef = useRef(null);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useLayoutEffect(() => {
+    const targetRect = targetRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+
+    setPosition({
+      top: targetRect.top - tooltipRect.height - 8,
+      left: targetRect.left + targetRect.width / 2 - tooltipRect.width / 2,
+    });
+  }, []);
+
+  return (
+    <div
+      ref={tooltipRef}
+      style={{
+        position: "fixed",
+        top: position.top,
+        left: position.left,
+        background: "#333",
+        color: "#fff",
+        padding: "4px 8px",
+        borderRadius: 4,
+        fontSize: 14,
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+```
+
+> **Why not `useEffect`?** With `useEffect`, the tooltip would flash in wrong position first, then jump — visible to user. `useLayoutEffect` positions it correctly before paint.
+
+---
+
+### 📍 Example 3: Scroll Position Restore
+
+```jsx
+import { useLayoutEffect } from "react";
+import { useLocation } from "react-router-dom";
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+```
+
+---
+
+## 🔹 2. `forwardRef` — Pass Ref to Child Component
+
+### 🧠 What is it?
+
+Normally, you can't pass `ref` as a prop to a child component — React handles refs specially. `forwardRef` lets you **forward** a ref from parent to a DOM element inside the child.
+
+### 📍 Problem Without forwardRef
+
+```jsx
+// ❌ This doesn't work — ref doesn't reach the input!
+function MyInput({ ref, ...props }) {
+  return <input ref={ref} {...props} />;
+}
+
+function App() {
+  const inputRef = useRef(null);
+  return <MyInput ref={inputRef} placeholder="Type..." />;
+  // inputRef.current is null!
+}
+```
+
+---
+
+### ✅ Solution With forwardRef
+
+```jsx
+import { forwardRef, useRef } from "react";
+
+// forwardRef wraps the component
+const MyInput = forwardRef(function MyInput(props, ref) {
+  return (
+    <input
+      ref={ref}  // forward the ref to the actual DOM input
+      style={{ padding: 8, border: "2px solid #2196f3", borderRadius: 4 }}
+      {...props}
+    />
+  );
+});
+
+function App() {
+  const inputRef = useRef(null);
+
+  const handleFocus = () => {
+    inputRef.current.focus(); // works! ✅
+  };
+
+  return (
+    <div>
+      <MyInput ref={inputRef} placeholder="Type here..." />
+      <button onClick={handleFocus}>Focus Input</button>
+    </div>
+  );
+}
+```
+
+---
+
+### 📍 Real World: Custom Button Component
+
+```jsx
+import { forwardRef } from "react";
+
+const Button = forwardRef(function Button(
+  { children, variant = "primary", ...props },
+  ref
+) {
+  const styles = {
+    primary: { background: "#2196f3", color: "#fff" },
+    danger: { background: "#f44336", color: "#fff" },
+    outline: { background: "transparent", border: "2px solid #2196f3" },
+  };
+
+  return (
+    <button
+      ref={ref}
+      style={{
+        padding: "8px 16px",
+        borderRadius: 4,
+        border: "none",
+        cursor: "pointer",
+        ...styles[variant],
+      }}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
+
+export default Button;
+```
+
+---
+
+## 🔹 3. `useImperativeHandle` — Expose Custom Methods to Parent
+
+### 🧠 What is it?
+
+`useImperativeHandle` lets a child component **expose specific methods** to the parent through a ref — instead of exposing the raw DOM element.
+
+Used **together with `forwardRef`**.
+
+### 🧩 Syntax
+
+```jsx
+useImperativeHandle(ref, () => ({
+  methodName() { ... },
+  anotherMethod() { ... }
+}), [deps]);
+```
+
+---
+
+### 📍 Example 1: Custom Input with Focus & Clear
+
+```jsx
+import { forwardRef, useImperativeHandle, useRef } from "react";
+
+const SmartInput = forwardRef(function SmartInput(props, ref) {
+  const inputRef = useRef(null);
+
+  // Expose only specific methods — not the whole DOM element
+  useImperativeHandle(ref, () => ({
+    focus() {
+      inputRef.current.focus();
+    },
+    clear() {
+      inputRef.current.value = "";
+    },
+    getValue() {
+      return inputRef.current.value;
+    },
+  }));
+
+  return (
+    <input
+      ref={inputRef}
+      style={{ padding: 8, border: "1px solid #ddd", borderRadius: 4 }}
+      {...props}
+    />
+  );
+});
+
+function App() {
+  const inputRef = useRef(null);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 300 }}>
+      <SmartInput ref={inputRef} placeholder="Type something..." />
+      <button onClick={() => inputRef.current.focus()}>Focus</button>
+      <button onClick={() => inputRef.current.clear()}>Clear</button>
+      <button onClick={() => alert(inputRef.current.getValue())}>
+        Get Value
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+### 📍 Example 2: Video Player with Exposed Controls
+
+```jsx
+import { forwardRef, useImperativeHandle, useRef } from "react";
+
+const VideoPlayer = forwardRef(function VideoPlayer({ src }, ref) {
+  const videoRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    play() { videoRef.current.play(); },
+    pause() { videoRef.current.pause(); },
+    seek(time) { videoRef.current.currentTime = time; },
+    getTime() { return videoRef.current.currentTime; },
+  }));
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      width="400"
+      style={{ borderRadius: 8 }}
+    />
+  );
+});
+
+function App() {
+  const playerRef = useRef(null);
+
+  return (
+    <div>
+      <VideoPlayer ref={playerRef} src="/movie.mp4" />
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <button onClick={() => playerRef.current.play()}>▶ Play</button>
+        <button onClick={() => playerRef.current.pause()}>⏸ Pause</button>
+        <button onClick={() => playerRef.current.seek(0)}>⏮ Restart</button>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+```mermaid
+graph LR
+    A[Parent] -->|ref| B[forwardRef wrapper]
+    B -->|useImperativeHandle| C[Exposes: play pause seek]
+    C -->|controls| D[DOM video element]
+    style C fill:#4caf50,color:#fff
+```
+
+---
+
+## 🔹 4. `useId` — Generate Unique IDs
+
+### 🧠 What is it?
+
+`useId` generates a **unique stable ID** for a component instance. Useful for accessibility attributes (`htmlFor`, `aria-labelledby`, etc.) that require matching IDs.
+
+### 🧩 Syntax
+
+```jsx
+const id = useId();
+// id will be something like ":r0:", ":r1:", etc.
+```
+
+---
+
+### 📍 Problem Without useId
+
+```jsx
+// ❌ Hardcoded IDs break when component is used multiple times!
+function EmailField() {
+  return (
+    <div>
+      <label htmlFor="email">Email</label>
+      <input id="email" type="email" />
+    </div>
+  );
+}
+
+// If you use <EmailField /> twice, there are two elements with id="email"
+// This is invalid HTML and breaks accessibility!
+```
+
+---
+
+### ✅ Solution With useId
+
+```jsx
+import { useId } from "react";
+
+function EmailField() {
+  const id = useId();
+  // id is unique per component instance
+
+  return (
+    <div>
+      <label htmlFor={id}>Email</label>
+      <input id={id} type="email" />
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <form>
+      {/* Each instance gets a unique id */}
+      <EmailField />  {/* id = ":r0:" */}
+      <EmailField />  {/* id = ":r1:" */}
+    </form>
+  );
+}
+```
+
+---
+
+### 📍 Real World: Form with Multiple Fields
+
+```jsx
+import { useId } from "react";
+
+function FormField({ label, type = "text", ...inputProps }) {
+  const id = useId();
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label
+        htmlFor={id}
+        style={{ display: "block", marginBottom: 4, fontWeight: "bold" }}
+      >
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ddd" }}
+        {...inputProps}
+      />
+    </div>
+  );
+}
+
+function RegistrationForm() {
+  return (
+    <form style={{ maxWidth: 400, margin: "0 auto", padding: 20 }}>
+      <h2>Register</h2>
+      <FormField label="Full Name" placeholder="Ali Hassan" />
+      <FormField label="Email" type="email" placeholder="ali@example.com" />
+      <FormField label="Password" type="password" />
+      <FormField label="Phone" type="tel" placeholder="+92 300 1234567" />
+      <button type="submit" style={{ width: "100%", padding: 10 }}>
+        Register
+      </button>
+    </form>
+  );
+}
+```
+
+---
+
+### 📍 useId with Related Elements
+
+```jsx
+import { useId } from "react";
+
+function Accordion({ title, children }) {
+  const contentId = useId();
+  const buttonId = useId();
+
+  return (
+    <div>
+      <button
+        id={buttonId}
+        aria-controls={contentId}
+        aria-expanded="true"
+      >
+        {title}
+      </button>
+      <div
+        id={contentId}
+        role="region"
+        aria-labelledby={buttonId}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 🔹 All Hooks at a Glance
 
 ```mermaid
 graph TD
-    A[Code Reuse Problem] --> B[HOC - Higher Order Components]
-    A --> C[Render Props]
-    A --> D[Compound Components]
-    A --> E[Custom Hooks - Modern Way]
-    B --> F[Wrap component, inject behavior]
-    C --> G[Pass render logic as function]
-    D --> H[Share implicit state via Context]
+    A[Advanced Hooks] --> B[useLayoutEffect]
+    A --> C[forwardRef]
+    A --> D[useImperativeHandle]
+    A --> E[useId]
+
+    B --> B1[DOM measurement before paint]
+    C --> C1[Pass ref to child's DOM element]
+    D --> D1[Expose custom methods via ref]
+    E --> E1[Generate unique accessible IDs]
+
+    style B fill:#ff9800,color:#fff
+    style C fill:#9c27b0,color:#fff
+    style D fill:#2196f3,color:#fff
     style E fill:#4caf50,color:#fff
 ```
 
 ---
 
-## 🔹 1. Higher Order Components (HOC)
-
-### 🧠 What is it?
-
-A **Higher Order Component** is a function that takes a component and returns a **new, enhanced component**. Think of it like a decorator.
-
-```
-HOC = (Component) => EnhancedComponent
-```
-
----
-
-### 📍 Example 1: withLoading HOC
-
-```jsx
-// HOC that adds loading state to any component
-function withLoading(WrappedComponent) {
-  return function WithLoadingComponent({ isLoading, ...props }) {
-    if (isLoading) {
-      return (
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
-          padding: 40,
-          fontSize: 18,
-          color: "#666",
-        }}>
-          ⏳ Loading...
-        </div>
-      );
-    }
-
-    return <WrappedComponent {...props} />;
-  };
-}
-
-// Original component — knows nothing about loading
-function UserList({ users }) {
-  return (
-    <ul>
-      {users.map((user) => (
-        <li key={user.id}>{user.name}</li>
-      ))}
-    </ul>
-  );
-}
-
-// Enhanced component with loading built in
-const UserListWithLoading = withLoading(UserList);
-
-// Usage
-function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [users, setUsers] = useState([]);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setUsers([{ id: 1, name: "Ali" }, { id: 2, name: "Sara" }]);
-      setIsLoading(false);
-    }, 2000);
-  }, []);
-
-  return <UserListWithLoading isLoading={isLoading} users={users} />;
-}
-```
-
----
-
-### 📍 Example 2: withAuth HOC (Route Protection)
-
-```jsx
-import { Navigate } from "react-router-dom";
-
-function withAuth(WrappedComponent) {
-  return function AuthenticatedComponent(props) {
-    const isAuthenticated = localStorage.getItem("token");
-
-    if (!isAuthenticated) {
-      return <Navigate to="/login" replace />;
-    }
-
-    return <WrappedComponent {...props} />;
-  };
-}
-
-// Protect any page with one line
-const ProtectedDashboard = withAuth(Dashboard);
-const ProtectedProfile = withAuth(Profile);
-const ProtectedSettings = withAuth(Settings);
-
-// In routes
-<Route path="/dashboard" element={<ProtectedDashboard />} />
-<Route path="/profile" element={<ProtectedProfile />} />
-```
-
----
-
-### 📍 Example 3: withLogger HOC
-
-```jsx
-function withLogger(WrappedComponent) {
-  return function LoggedComponent(props) {
-    useEffect(() => {
-      console.log(`[${WrappedComponent.name}] mounted with props:`, props);
-      return () => {
-        console.log(`[${WrappedComponent.name}] unmounted`);
-      };
-    }, []);
-
-    useEffect(() => {
-      console.log(`[${WrappedComponent.name}] props updated:`, props);
-    });
-
-    return <WrappedComponent {...props} />;
-  };
-}
-
-const LoggedButton = withLogger(Button);
-const LoggedUserCard = withLogger(UserCard);
-```
-
----
-
-### ⚠️ HOC Caveats
-
-```jsx
-// Problem 1: DisplayName lost in DevTools
-// Fix: set displayName
-function withLoading(WrappedComponent) {
-  function WithLoading(props) { ... }
-  WithLoading.displayName = `withLoading(${WrappedComponent.displayName || WrappedComponent.name})`;
-  return WithLoading;
-}
-
-// Problem 2: Props are forwarded automatically — make sure to spread
-function withAuth(WrappedComponent) {
-  return function Auth(props) {
-    if (!isAuth) return <Navigate to="/login" />;
-    return <WrappedComponent {...props} />; // ← must spread ALL props
-  };
-}
-```
-
----
-
-## 🔹 2. Render Props
-
-### 🧠 What is it?
-
-A component receives a **function as a prop** and calls that function to render its output. The component provides **data/behavior**, you decide **what to render**.
-
-```
-<Component render={(data) => <YourUI data={data} />} />
-```
-
----
-
-### 📍 Example 1: Mouse Tracker
-
-```jsx
-// Provides mouse position logic
-function MouseTracker({ render }) {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-
-  const handleMouseMove = (e) => {
-    setPosition({ x: e.clientX, y: e.clientY });
-  };
-
-  return (
-    <div style={{ height: "100vh" }} onMouseMove={handleMouseMove}>
-      {render(position)} {/* Call render prop with data */}
-    </div>
-  );
-}
-
-// Different UIs using the same mouse tracking logic
-function App() {
-  return (
-    <>
-      {/* Use 1: Show coordinates */}
-      <MouseTracker
-        render={({ x, y }) => (
-          <p>Mouse: {x}, {y}</p>
-        )}
-      />
-
-      {/* Use 2: Follow cursor */}
-      <MouseTracker
-        render={({ x, y }) => (
-          <div
-            style={{
-              position: "fixed",
-              left: x,
-              top: y,
-              width: 20,
-              height: 20,
-              background: "red",
-              borderRadius: "50%",
-              transform: "translate(-50%, -50%)",
-              pointerEvents: "none",
-            }}
-          />
-        )}
-      />
-    </>
-  );
-}
-```
-
----
-
-### 📍 Example 2: Data Fetcher with Render Props
-
-```jsx
-function DataFetcher({ url, render }) {
-  const [state, setState] = useState({
-    data: null,
-    loading: true,
-    error: null,
-  });
-
-  useEffect(() => {
-    setState({ data: null, loading: true, error: null });
-    fetch(url)
-      .then((r) => r.json())
-      .then((data) => setState({ data, loading: false, error: null }))
-      .catch((err) => setState({ data: null, loading: false, error: err.message }));
-  }, [url]);
-
-  return render(state);
-}
-
-// Usage — completely flexible rendering
-function App() {
-  return (
-    <DataFetcher
-      url="https://jsonplaceholder.typicode.com/users"
-      render={({ data, loading, error }) => {
-        if (loading) return <div>⏳ Loading...</div>;
-        if (error) return <div>❌ Error: {error}</div>;
-        return (
-          <ul>
-            {data.map((user) => (
-              <li key={user.id}>{user.name} — {user.email}</li>
-            ))}
-          </ul>
-        );
-      }}
-    />
-  );
-}
-```
-
----
-
-### 📍 Children as Function (Common Pattern)
-
-```jsx
-// Same as render prop, but uses children
-function Toggle({ children }) {
-  const [on, setOn] = useState(false);
-  return children({ on, toggle: () => setOn(!on) });
-}
-
-function App() {
-  return (
-    <Toggle>
-      {({ on, toggle }) => (
-        <div>
-          <p>The toggle is {on ? "ON" : "OFF"}</p>
-          <button onClick={toggle}>Toggle</button>
-        </div>
-      )}
-    </Toggle>
-  );
-}
-```
-
----
-
-## 🔹 3. Compound Components
-
-### 🧠 What is it?
-
-Compound components work together as a group — like `<select>` and `<option>` in HTML. They **share implicit state** through React Context, so the parent manages state while children can access it.
-
----
-
-### 📍 Example: Custom Select Component
-
-```jsx
-import { createContext, useContext, useState } from "react";
-
-// Context for sharing state between compound components
-const SelectContext = createContext(null);
-
-// Parent — owns the state
-function Select({ children, value, onChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <SelectContext.Provider value={{ value, onChange, isOpen, setIsOpen }}>
-      <div style={{ position: "relative", display: "inline-block" }}>
-        {children}
-      </div>
-    </SelectContext.Provider>
-  );
-}
-
-// Trigger — shows current value, opens/closes
-Select.Trigger = function Trigger({ placeholder = "Select..." }) {
-  const { value, isOpen, setIsOpen } = useContext(SelectContext);
-  return (
-    <button
-      onClick={() => setIsOpen(!isOpen)}
-      style={{
-        padding: "8px 16px",
-        border: "1px solid #ddd",
-        borderRadius: 4,
-        background: "#fff",
-        cursor: "pointer",
-        minWidth: 150,
-        display: "flex",
-        justifyContent: "space-between",
-      }}
-    >
-      {value || placeholder}
-      <span>{isOpen ? "▲" : "▼"}</span>
-    </button>
-  );
-};
-
-// Options container
-Select.Options = function Options({ children }) {
-  const { isOpen } = useContext(SelectContext);
-  if (!isOpen) return null;
-  return (
-    <div style={{
-      position: "absolute",
-      top: "100%",
-      left: 0,
-      right: 0,
-      background: "#fff",
-      border: "1px solid #ddd",
-      borderRadius: 4,
-      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-      zIndex: 100,
-    }}>
-      {children}
-    </div>
-  );
-};
-
-// Individual option
-Select.Option = function Option({ value, children }) {
-  const { value: selectedValue, onChange, setIsOpen } = useContext(SelectContext);
-  const isSelected = selectedValue === value;
-
-  return (
-    <div
-      onClick={() => {
-        onChange(value);
-        setIsOpen(false);
-      }}
-      style={{
-        padding: "8px 16px",
-        cursor: "pointer",
-        background: isSelected ? "#e3f2fd" : "#fff",
-        fontWeight: isSelected ? "bold" : "normal",
-      }}
-    >
-      {children}
-    </div>
-  );
-};
-
-// Usage — clean and intuitive!
-function App() {
-  const [country, setCountry] = useState("");
-
-  return (
-    <div style={{ padding: 20 }}>
-      <Select value={country} onChange={setCountry}>
-        <Select.Trigger placeholder="Select country..." />
-        <Select.Options>
-          <Select.Option value="pk">🇵🇰 Pakistan</Select.Option>
-          <Select.Option value="us">🇺🇸 United States</Select.Option>
-          <Select.Option value="uk">🇬🇧 United Kingdom</Select.Option>
-          <Select.Option value="ae">🇦🇪 UAE</Select.Option>
-        </Select.Options>
-      </Select>
-
-      {country && <p>Selected: {country}</p>}
-    </div>
-  );
-}
-```
-
----
-
-### 📍 Example 2: Accordion Compound Component
-
-```jsx
-import { createContext, useContext, useState } from "react";
-
-const AccordionContext = createContext(null);
-
-function Accordion({ children, defaultOpen = null }) {
-  const [openItem, setOpenItem] = useState(defaultOpen);
-
-  const toggle = (id) => setOpenItem(openItem === id ? null : id);
-
-  return (
-    <AccordionContext.Provider value={{ openItem, toggle }}>
-      <div style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}>
-        {children}
-      </div>
-    </AccordionContext.Provider>
-  );
-}
-
-Accordion.Item = function Item({ id, children }) {
-  return <div style={{ borderBottom: "1px solid #ddd" }}>{children}</div>;
-};
-
-Accordion.Header = function Header({ id, children }) {
-  const { openItem, toggle } = useContext(AccordionContext);
-  const isOpen = openItem === id;
-
-  return (
-    <button
-      onClick={() => toggle(id)}
-      style={{
-        width: "100%",
-        padding: "12px 16px",
-        background: isOpen ? "#e3f2fd" : "#fff",
-        border: "none",
-        textAlign: "left",
-        cursor: "pointer",
-        display: "flex",
-        justifyContent: "space-between",
-        fontWeight: isOpen ? "bold" : "normal",
-      }}
-    >
-      {children}
-      <span>{isOpen ? "▲" : "▼"}</span>
-    </button>
-  );
-};
-
-Accordion.Content = function Content({ id, children }) {
-  const { openItem } = useContext(AccordionContext);
-  if (openItem !== id) return null;
-
-  return (
-    <div style={{ padding: "12px 16px", background: "#fafafa" }}>
-      {children}
-    </div>
-  );
-};
-
-// Usage
-function FAQ() {
-  return (
-    <div style={{ maxWidth: 600, margin: "0 auto", padding: 20 }}>
-      <h2>Frequently Asked Questions</h2>
-      <Accordion defaultOpen="q1">
-        <Accordion.Item id="q1">
-          <Accordion.Header id="q1">What is React?</Accordion.Header>
-          <Accordion.Content id="q1">
-            React is a JavaScript library for building user interfaces.
-          </Accordion.Content>
-        </Accordion.Item>
-
-        <Accordion.Item id="q2">
-          <Accordion.Header id="q2">What are hooks?</Accordion.Header>
-          <Accordion.Content id="q2">
-            Hooks are functions that let you use state and lifecycle features in functional components.
-          </Accordion.Content>
-        </Accordion.Item>
-
-        <Accordion.Item id="q3">
-          <Accordion.Header id="q3">What is Context API?</Accordion.Header>
-          <Accordion.Content id="q3">
-            Context API allows you to share state across components without prop drilling.
-          </Accordion.Content>
-        </Accordion.Item>
-      </Accordion>
-    </div>
-  );
-}
-```
-
----
-
-## 🔹 Patterns Comparison
-
-```mermaid
-graph LR
-    A[Need to reuse logic?] --> B{What kind?}
-    B --> C[Wrap component + inject props]
-    B --> D[Share state/behavior, flexible render]
-    B --> E[Group of related components sharing state]
-    C --> F[HOC]
-    D --> G[Render Props]
-    E --> H[Compound Components]
-    G --> I[Or Modern: Custom Hook]
-    style F fill:#ff9800,color:#fff
-    style G fill:#9c27b0,color:#fff
-    style H fill:#2196f3,color:#fff
-    style I fill:#4caf50,color:#fff
-```
-
-| Pattern | Best For | Example Libraries |
-|---------|----------|------------------|
-| HOC | Cross-cutting concerns (auth, logging, loading) | Redux connect(), React Router withRouter |
-| Render Props | Flexible rendering with shared logic | Downshift, React Motion |
-| Compound Components | Grouped UI with shared state | Radix UI, Headless UI |
-| Custom Hooks | Logic reuse (modern React) | SWR, React Query |
-
----
-
 ## 🎯 Interview Questions
 
-**Q1: What is a Higher Order Component?**
+**Q1: What's the difference between `useEffect` and `useLayoutEffect`?**
 
-> A function that takes a component and returns a new enhanced component. It's used to add cross-cutting behavior (auth, loading, logging) without modifying the original component.
+> `useLayoutEffect` runs synchronously after DOM updates but **before the browser paints**. `useEffect` runs asynchronously after the paint. Use `useLayoutEffect` when you need to measure DOM or prevent visual flicker.
 
-**Q2: What problem do Render Props solve?**
+**Q2: What problem does `forwardRef` solve?**
 
-> They allow sharing stateful logic or behavior between components without HOCs. The component owning the logic calls a function prop to render UI — the consumer decides what to render.
+> React doesn't pass `ref` through props automatically. `forwardRef` allows a parent to attach a ref to a DOM element inside a child component.
 
-**Q3: How do Compound Components work internally?**
+**Q3: Why would you use `useImperativeHandle`?**
 
-> They use React Context to share implicit state between the parent and its child sub-components. The parent manages state and provides it through Context; children read from Context without needing explicit prop passing.
+> When you want to expose a **limited, controlled API** (custom methods) to the parent via ref, instead of exposing the entire raw DOM element. Good for components like modals, inputs, or video players.
 
-**Q4: Are HOCs and Render Props replaced by hooks?**
+**Q4: Why use `useId` instead of just a counter or random number?**
 
-> Custom hooks can replace most HOC and render props use cases with cleaner code. But HOCs are still common for wrapping entire components (like auth protection), and compound components are still the best pattern for complex UI groups.
+> `useId` is **stable across server and client renders** (important for SSR/Next.js) and unique per component instance. Random numbers or counters can cause hydration mismatches.
 
 ---
 
 ## 🏠 Home Task
 
-Build a **Tabs Component** using Compound Components:
-
-```jsx
-// Target API:
-<Tabs defaultTab="about">
-  <Tabs.List>
-    <Tabs.Tab id="about">About</Tabs.Tab>
-    <Tabs.Tab id="projects">Projects</Tabs.Tab>
-    <Tabs.Tab id="contact">Contact</Tabs.Tab>
-  </Tabs.List>
-  <Tabs.Panel id="about"><AboutContent /></Tabs.Panel>
-  <Tabs.Panel id="projects"><ProjectsContent /></Tabs.Panel>
-  <Tabs.Panel id="contact"><ContactContent /></Tabs.Panel>
-</Tabs>
-```
-
-Also add a `withErrorBoundary` HOC and wrap each Panel with it.
+Build a **Custom Modal Component** that:
+1. Uses `forwardRef` so the parent can control it via ref
+2. Uses `useImperativeHandle` to expose `open()` and `close()` methods
+3. Uses `useId` for the modal title and aria attributes
+4. Uses `useLayoutEffect` to lock page scroll when modal is open
+5. Parent should be able to do: `modalRef.current.open()` and `modalRef.current.close()`
