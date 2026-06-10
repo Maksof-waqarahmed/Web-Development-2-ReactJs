@@ -11,6 +11,8 @@
 - `SessionProvider` and `useSession`
 - `auth()` — reading session on server
 - `signIn()` and `signOut()`
+- **Edge Middleware** — geolocation, headers, A/B testing
+- **Internationalization (i18n)** — detect locale, redirect to language routes
 
 ---
 
@@ -348,6 +350,208 @@ export default function LoginPage() {
 
 ---
 
+## 9️⃣ Edge Middleware — Geolocation & A/B Testing
+
+Edge Middleware runs on Vercel's Edge Network — closest to the user, before the server.
+
+```js
+// middleware.js
+import { NextResponse } from "next/server";
+
+export function middleware(request) {
+  const { pathname, nextUrl } = request;
+
+  // --- Geolocation-based redirect ---
+  const country = request.geo?.country || "US";   // Vercel sets this automatically
+
+  // Redirect users to their country's store
+  if (pathname === "/" && country === "PK") {
+    return NextResponse.redirect(new URL("/pk", request.url));
+  }
+  if (pathname === "/" && country === "GB") {
+    return NextResponse.redirect(new URL("/gb", request.url));
+  }
+
+  // --- A/B Testing ---
+  // Randomly assign users to variant A or B
+  const abVariant = request.cookies.get("ab-variant")?.value;
+  if (!abVariant && pathname === "/") {
+    const variant = Math.random() > 0.5 ? "a" : "b";
+    const response = NextResponse.next();
+    response.cookies.set("ab-variant", variant, { maxAge: 60 * 60 * 24 });
+    return response;
+  }
+
+  // --- Add custom headers ---
+  const response = NextResponse.next();
+  response.headers.set("x-country", country);
+  response.headers.set("x-pathname", pathname);
+  return response;
+}
+
+export const config = {
+  matcher: ["/((?!_next|api|favicon.ico).*)"],
+};
+```
+
+```jsx
+// app/page.jsx — Read country from header set by middleware
+import { headers } from "next/headers";
+
+export default async function HomePage() {
+  const headersList = await headers();
+  const country = headersList.get("x-country") || "US";
+
+  const prices = {
+    US: { currency: "$", price: 99 },
+    PK: { currency: "₨", price: 27000 },
+    GB: { currency: "£", price: 79 },
+  };
+
+  const { currency, price } = prices[country] || prices.US;
+
+  return (
+    <div>
+      <h1>Our Product</h1>
+      <p>Price: {currency}{price}</p>
+      <p>Your country: {country}</p>
+    </div>
+  );
+}
+```
+
+---
+
+## 🔟 Internationalization (i18n) — Language Routes
+
+```
+/en/products      ← English
+/pk/products      ← Urdu (Pakistan)
+/ar/products      ← Arabic
+```
+
+**Setup with next-intl:**
+
+```bash
+npm install next-intl
+```
+
+```js
+// middleware.js
+import createMiddleware from "next-intl/middleware";
+
+export default createMiddleware({
+  locales: ["en", "pk", "ar"],
+  defaultLocale: "en",
+  localeDetection: true,   // auto-detect from Accept-Language header
+});
+
+export const config = {
+  matcher: ["/((?!api|_next|favicon.ico).*)"],
+};
+```
+
+```
+messages/
+  en.json        ← English translations
+  pk.json        ← Urdu translations
+  ar.json        ← Arabic translations
+```
+
+```json
+// messages/en.json
+{
+  "nav": {
+    "home": "Home",
+    "products": "Products",
+    "cart": "Cart"
+  },
+  "home": {
+    "title": "Welcome to our store",
+    "subtitle": "Find the best products"
+  }
+}
+```
+
+```json
+// messages/pk.json
+{
+  "nav": {
+    "home": "ہوم",
+    "products": "مصنوعات",
+    "cart": "ٹوکری"
+  },
+  "home": {
+    "title": "ہمارے اسٹور میں خوش آمدید",
+    "subtitle": "بہترین مصنوعات تلاش کریں"
+  }
+}
+```
+
+```jsx
+// app/[locale]/layout.jsx
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
+
+export default async function LocaleLayout({ children, params: { locale } }) {
+  const messages = await getMessages();
+
+  return (
+    <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
+      <body>
+        <NextIntlClientProvider messages={messages}>
+          {children}
+        </NextIntlClientProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+```jsx
+// app/[locale]/page.jsx
+import { useTranslations } from "next-intl";
+
+export default function HomePage() {
+  const t = useTranslations("home");
+
+  return (
+    <div>
+      <h1>{t("title")}</h1>
+      <p>{t("subtitle")}</p>
+    </div>
+  );
+}
+```
+
+**Language switcher:**
+```jsx
+// components/LanguageSwitcher.jsx
+"use client";
+import { useRouter, usePathname } from "next/navigation";
+
+export default function LanguageSwitcher() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const switchLocale = (locale) => {
+    // Replace current locale in path
+    const newPath = pathname.replace(/^\/(en|pk|ar)/, `/${locale}`);
+    router.push(newPath);
+  };
+
+  return (
+    <div style={{ display: "flex", gap: 8 }}>
+      <button onClick={() => switchLocale("en")}>English</button>
+      <button onClick={() => switchLocale("pk")}>اردو</button>
+      <button onClick={() => switchLocale("ar")}>العربية</button>
+    </div>
+  );
+}
+```
+
+---
+
 ## 🏠 Home Task
 
 Build a **Protected App** with NextAuth:
@@ -358,3 +562,4 @@ Build a **Protected App** with NextAuth:
 5. Add a Sign Out button using `signOut()`
 6. Add Middleware to protect all `/dashboard/*` routes
 7. Bonus: Add a Google OAuth button (requires Google Cloud Console setup)
+8. **Bonus i18n:** Install `next-intl`, create `en.json` and one other language, add language switcher to navbar
